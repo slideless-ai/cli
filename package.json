@@ -1,7 +1,7 @@
 {
   "name": "slideless",
   "version": "0.1.0",
-  "description": "CLI for the Slideless presentation hosting platform — share, update, list, and manage HTML presentations from your terminal.",
+  "description": "Official CLI for the Slideless presentation hosting platform: share, update, list, and manage HTML presentations from your terminal.",
   "type": "module",
   "bin": {
     "slideless": "./dist/cli/index.js"
@@ -13,16 +13,24 @@
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build && npm test"
   },
   "keywords": [
     "slideless",
     "presentations",
     "cli",
     "html",
-    "sharing"
+    "sharing",
+    "otp",
+    "auth",
+    "pitch",
+    "deck"
   ],
-  "author": "Slideless",
+  "author": {
+    "name": "Slideless",
+    "email": "team@slideless.ai",
+    "url": "https://slideless.ai"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -31,7 +39,10 @@
   "bugs": {
     "url": "https://github.com/slideless-ai/cli/issues"
   },
-  "homepage": "https://slideless.ai",
+  "homepage": "https://github.com/slideless-ai/cli#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "commander": "^12.0.0"
   },
