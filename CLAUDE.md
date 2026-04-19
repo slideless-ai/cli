@@ -70,7 +70,7 @@ tests/
 
 ### Endpoints
 
-Endpoint paths live in `src/utils/config.ts` as a single `ENDPOINTS` constant (mirroring the codika-helper-sdk pattern). Update there when backend paths change.
+Endpoint paths live in `src/utils/config.ts` as a single `ENDPOINTS` constant (mirroring the codika-cli pattern (GH repo still: codika-io/codika-helper-sdk)). Update there when backend paths change.
 
 ### Adding a new command
 
