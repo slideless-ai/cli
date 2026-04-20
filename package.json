@@ -1,6 +1,6 @@
 {
   "name": "slideless",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Official CLI for the Slideless presentation hosting platform: share, update, list, and manage HTML presentations from your terminal.",
   "type": "module",
   "bin": {
