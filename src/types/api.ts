@@ -44,6 +44,40 @@ export interface PresentationTokenInfo {
   shareUrl: string;
 }
 
+// ─── Share via email ─────────────────────────────────────
+
+export interface SharePresentationViaEmailInput {
+  shareId: string;
+  emails: string[];
+  message?: string;
+  subject?: string;
+  tokenId?: string;
+}
+
+export interface SharePresentationViaEmailSent {
+  email: string;
+  tokenId: string;
+  resendMessageId: string | null;
+  shareUrl: string;
+}
+
+export interface SharePresentationViaEmailFailed {
+  email: string;
+  code: string;
+  message: string;
+}
+
+export interface SharePresentationViaEmailOutput {
+  shareId: string;
+  sent: SharePresentationViaEmailSent[];
+  failed: SharePresentationViaEmailFailed[];
+  summary: {
+    total: number;
+    sent: number;
+    failed: number;
+  };
+}
+
 export interface PresentationInfo {
   id: string;
   ownerId: string;

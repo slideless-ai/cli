@@ -49,6 +49,7 @@ export const ENDPOINTS = {
   verifyApiKey: '/verifyApiKey',
   uploadSharedPresentation: '/uploadSharedPresentation',
   updateSharedPresentation: '/updateSharedPresentation',
+  sharePresentationViaEmail: '/sharePresentationViaEmail',
   listMyPresentations: '/listMyPresentations',
   getSharedPresentationInfo: '/getSharedPresentationInfo',
   cliRequestSignupOtp: '/cliRequestSignupOtp',

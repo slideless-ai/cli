@@ -11,6 +11,8 @@ import type {
   UpdateSharedPresentationOutput,
   ListMyPresentationsOutput,
   PresentationInfo,
+  SharePresentationViaEmailInput,
+  SharePresentationViaEmailOutput,
 } from '../types/api.js';
 
 export interface SharedClientOptions {
@@ -51,6 +53,25 @@ export async function listMyPresentations(
     url,
     method: 'GET',
     apiKey: opts.apiKey,
+  });
+}
+
+export async function sharePresentationViaEmail(
+  opts: SharedClientOptions & SharePresentationViaEmailInput,
+): Promise<ApiResult<SharePresentationViaEmailOutput>> {
+  const url = resolveEndpointUrl('sharePresentationViaEmail', opts.apiUrl, opts.profileName);
+  const body: Record<string, unknown> = {
+    shareId: opts.shareId,
+    emails: opts.emails,
+  };
+  if (opts.message !== undefined) body.message = opts.message;
+  if (opts.subject !== undefined) body.subject = opts.subject;
+  if (opts.tokenId !== undefined) body.tokenId = opts.tokenId;
+  return apiCall<SharePresentationViaEmailOutput>({
+    url,
+    method: 'POST',
+    apiKey: opts.apiKey,
+    body,
   });
 }
 

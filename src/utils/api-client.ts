@@ -74,6 +74,8 @@ export async function apiCall<T = unknown>(options: ApiCallOptions): Promise<Api
   }
 
   if (!response.ok) {
+    const nextAction = body?.error?.nextAction ?? body?.nextAction;
+    const details = body?.error?.details ?? body?.details;
     return {
       success: false,
       status: response.status,
@@ -84,8 +86,8 @@ export async function apiCall<T = unknown>(options: ApiCallOptions): Promise<Api
           (typeof body?.error === 'string' ? body.error : undefined) ||
           body?.message ||
           `HTTP ${response.status}: ${response.statusText}`,
-        ...(body?.error?.nextAction && { nextAction: body.error.nextAction }),
-        ...(body?.error?.details && { details: body.error.details }),
+        ...(nextAction && { nextAction }),
+        ...(details && { details }),
       },
     };
   }
