@@ -1,25 +1,60 @@
 name: Publish to npm
 
+# Fires on any version tag push (e.g. `git tag v0.2.0 && git push origin v0.2.0`).
+# The workflow refuses to publish if the tag doesn't match `package.json#version`,
+# so the on-disk manifest is always the source of truth.
 on:
   push:
     tags:
       - 'v*.*.*'
 
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish:
+    name: Build, test, publish
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
+      id-token: write   # required for `npm publish --provenance`
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
-      - run: npm publish --access public
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Verify tag matches package.json version
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag v$TAG_VERSION does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+          echo "Publishing version $PKG_VERSION"
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "### Published \`slideless@${GITHUB_REF#refs/tags/v}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- npm: https://www.npmjs.com/package/slideless" >> $GITHUB_STEP_SUMMARY
+          echo "- tag: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
