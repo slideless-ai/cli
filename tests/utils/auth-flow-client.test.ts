@@ -33,7 +33,7 @@ describe('auth-flow-client', () => {
     expect(JSON.parse(init.body)).toEqual({ email: 'a@b.co' });
   });
 
-  it('signupComplete includes company + logo + apiKey in the body when set', async () => {
+  it('signupComplete includes user + company + logo + apiKey in the body when set', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -53,6 +53,7 @@ describe('auth-flow-client', () => {
     const res = await signupComplete({
       email: 'a@b.co',
       code: '123456',
+      user: { firstName: 'Romain', lastName: 'Pattyn' },
       company: { name: 'Acme', brandPrimary: '#0a0a0a' },
       logo: { data: 'AAAA', contentType: 'image/png' },
       apiKey: { name: 'ci', expiresInDays: 30 },
@@ -66,9 +67,42 @@ describe('auth-flow-client', () => {
     expect(body).toEqual({
       email: 'a@b.co',
       code: '123456',
+      user: { firstName: 'Romain', lastName: 'Pattyn' },
       company: { name: 'Acme', brandPrimary: '#0a0a0a' },
       logo: { data: 'AAAA', contentType: 'image/png' },
       apiKey: { name: 'ci', expiresInDays: 30 },
+    });
+  });
+
+  it('signupComplete forwards user.firstName even when no company is provided', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            organizationId: 'org1',
+            organizationName: "Romain's workspace",
+            apiKey: { keyId: 'k1', raw: 'cko_abc', keyPrefix: 'cko_abcd', name: 'CLI', scopes: [], createdAt: '2026-01-01T00:00:00Z' },
+            isNewUser: true,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    global.fetch = fetchMock as any;
+
+    await signupComplete({
+      email: 'a@b.co',
+      code: '123456',
+      user: { firstName: 'Romain' },
+      baseUrl: 'https://api.example',
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body).toEqual({
+      email: 'a@b.co',
+      code: '123456',
+      user: { firstName: 'Romain' },
     });
   });
 

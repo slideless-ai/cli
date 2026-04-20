@@ -30,6 +30,8 @@ import {
 interface Options {
   email: string;
   code: string;
+  firstName: string;
+  lastName?: string;
   company?: string;
   description?: string;
   brandPrimary?: string;
@@ -48,7 +50,9 @@ export const signupCompleteCommand = new Command('signup-complete')
   .description('Complete signup with an OTP; creates org and returns an API key')
   .requiredOption('--email <email>', 'Email address used for signup-request')
   .requiredOption('--code <code>', '6-digit code from the OTP email')
-  .option('--company <name>', 'Organization name (default "My Organization")')
+  .requiredOption('--first-name <name>', 'Your first name (used in onboarding emails and as the default workspace name)')
+  .option('--last-name <name>', 'Your last name (optional)')
+  .option('--company <name>', 'Organization name (defaults to "<your first name>\'s workspace")')
   .option('--description <text>', 'Organization description')
   .option('--brand-primary <hex>', 'Brand primary color, e.g. "#0a0a0a"')
   .option('--brand-secondary <hex>', 'Brand secondary color')
@@ -110,9 +114,15 @@ export const signupCompleteCommand = new Command('signup-complete')
       ...(options.tone !== undefined && { tone: options.tone }),
     };
 
+    const user = {
+      firstName: options.firstName,
+      ...(options.lastName !== undefined && { lastName: options.lastName }),
+    };
+
     const result = await signupComplete({
       email: options.email,
       code: options.code,
+      user,
       ...(Object.keys(company).length > 0 && { company }),
       ...(logo && { logo }),
       ...((options.keyName || expiresInDays !== undefined) && {
@@ -184,9 +194,12 @@ export const signupCompleteCommand = new Command('signup-complete')
       return;
     }
 
+    const displayName = [options.firstName, options.lastName].filter(Boolean).join(' ');
+
     console.log('');
     console.log(`${CHECK} ${green('Signup complete')}`);
     console.log('');
+    console.log(`  Name:          ${displayName}`);
     console.log(`  Organization:  ${result.data.organizationName}`);
     console.log(`  Org ID:        ${result.data.organizationId}`);
     console.log(`  Profile:       ${profileName} ${cyan('(now active)')}`);

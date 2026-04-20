@@ -29,6 +29,10 @@ export async function signupRequest(
 export interface CompleteSignupInput {
   email: string;
   code: string;
+  user: {
+    firstName: string;
+    lastName?: string;
+  };
   company?: {
     name?: string;
     description?: string;
