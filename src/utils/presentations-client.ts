@@ -13,6 +13,8 @@ import type {
   PresentationInfo,
   SharePresentationViaEmailInput,
   SharePresentationViaEmailOutput,
+  RevokeSharedPresentationOutput,
+  AddPresentationTokenOutput,
 } from '../types/api.js';
 
 export interface SharedClientOptions {
@@ -85,5 +87,31 @@ export async function getSharedPresentationInfo(
     url,
     method: 'GET',
     apiKey: opts.apiKey,
+  });
+}
+
+export async function revokeSharedPresentation(
+  opts: SharedClientOptions & { shareId: string; tokenId?: string },
+): Promise<ApiResult<RevokeSharedPresentationOutput>> {
+  const url = resolveEndpointUrl('revokeSharedPresentation', opts.apiUrl, opts.profileName);
+  const body: Record<string, unknown> = { shareId: opts.shareId };
+  if (opts.tokenId !== undefined) body.tokenId = opts.tokenId;
+  return apiCall<RevokeSharedPresentationOutput>({
+    url,
+    method: 'POST',
+    apiKey: opts.apiKey,
+    body,
+  });
+}
+
+export async function addPresentationToken(
+  opts: SharedClientOptions & { shareId: string; tokenName: string },
+): Promise<ApiResult<AddPresentationTokenOutput>> {
+  const url = resolveEndpointUrl('addPresentationToken', opts.apiUrl, opts.profileName);
+  return apiCall<AddPresentationTokenOutput>({
+    url,
+    method: 'POST',
+    apiKey: opts.apiKey,
+    body: { shareId: opts.shareId, tokenName: opts.tokenName },
   });
 }

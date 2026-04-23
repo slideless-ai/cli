@@ -23,6 +23,8 @@ import { shareEmailCommand } from './commands/share-email.js';
 import { updateCommand } from './commands/update.js';
 import { listCommand } from './commands/list.js';
 import { getCommand } from './commands/get.js';
+import { revokeCommand } from './commands/revoke.js';
+import { tokenCommand } from './commands/token.js';
 import { completionCommand } from './commands/completion.js';
 import { authCommand } from './commands/auth/index.js';
 import { checkProfileExpiry } from '../utils/config.js';
@@ -58,6 +60,8 @@ program.addCommand(shareEmailCommand);
 program.addCommand(updateCommand);
 program.addCommand(listCommand);
 program.addCommand(getCommand);
+program.addCommand(revokeCommand);
+program.addCommand(tokenCommand);
 program.addCommand(completionCommand);
 program.addCommand(authCommand);
 

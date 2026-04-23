@@ -94,3 +94,15 @@ export interface PresentationInfo {
   primaryShareUrl: string | null;
   tokens: PresentationTokenInfo[];
 }
+
+// ─── Revoke / add token ──────────────────────────────────
+
+export interface RevokeSharedPresentationOutput {
+  success: boolean;
+}
+
+export interface AddPresentationTokenOutput {
+  tokenId: string;
+  token: string;
+  shareUrl: string;
+}
