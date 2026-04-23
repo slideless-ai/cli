@@ -92,9 +92,22 @@ export async function apiCall<T = unknown>(options: ApiCallOptions): Promise<Api
     };
   }
 
-  // Some Slideless endpoints return the payload at the root, others wrap in { success, data }.
-  // Normalize: if the body explicitly says { success: false, ... }, treat as error.
-  if (body && typeof body === 'object' && body.success === false) {
+  // Every CLI-facing Slideless HTTP endpoint emits the shared envelope:
+  //   { success: true, data: T }
+  //   { success: false, error: { code, message, nextAction?, details? } }
+  // Anything else is a protocol error — fail loud rather than guess.
+  if (!body || typeof body !== 'object' || typeof body.success !== 'boolean') {
+    return {
+      success: false,
+      status: response.status,
+      error: {
+        code: 'invalid-response-shape',
+        message: 'Server response did not conform to the expected { success, data } envelope.',
+      },
+    };
+  }
+
+  if (body.success === false) {
     return {
       success: false,
       status: response.status,
@@ -107,12 +120,7 @@ export async function apiCall<T = unknown>(options: ApiCallOptions): Promise<Api
     };
   }
 
-  // If the body is wrapped as { success: true, data: ... } (verifyApiKey shape), unwrap it.
-  if (body && typeof body === 'object' && body.success === true && 'data' in body) {
-    return { success: true, data: body.data as T, status: response.status };
-  }
-
-  return { success: true, data: body as T, status: response.status };
+  return { success: true, data: body.data as T, status: response.status };
 }
 
 function mapStatusToCode(status: number): string {

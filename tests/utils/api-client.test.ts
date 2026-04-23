@@ -48,15 +48,27 @@ describe('apiCall', () => {
     }
   });
 
-  it('returns success: true with raw payload when not wrapped', async () => {
+  it('rejects 2xx responses that do not conform to the { success, data } envelope', async () => {
     global.fetch = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ shareId: '1', shareUrl: 'https://x' }), { status: 200 }),
     ) as any;
 
     const result = await apiCall<{ shareId: string }>({ url: 'https://example.com/x', apiKey: 'k' });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.shareId).toBe('1');
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe('invalid-response-shape');
+    }
+  });
+
+  it('rejects 2xx responses with a non-JSON body', async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response('not json', { status: 200 }),
+    ) as any;
+
+    const result = await apiCall({ url: 'https://example.com/x', apiKey: 'k' });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe('invalid-response-shape');
     }
   });
 
