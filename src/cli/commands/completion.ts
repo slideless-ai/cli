@@ -245,7 +245,7 @@ _slideless() {
         share)
           _arguments \\
             '--title[Display title]:title:' \\
-            '--update[Update existing share]:shareId:' \\
+            '--update[Update existing share]:presentationId:' \\
             '--api-key[API key]:key:' \\
             '--api-url[Base URL]:url:' \\
             '--profile[Profile name]:profile:' \\

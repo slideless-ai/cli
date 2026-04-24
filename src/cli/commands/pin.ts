@@ -7,8 +7,8 @@
  * want to accidentally change).
  *
  * Usage:
- *   slideless pin <shareId> <tokenId> --to-version <N>
- *   slideless pin <shareId> <tokenId> --latest
+ *   slideless pin <presentationId> <tokenId> --to-version <N>
+ *   slideless pin <presentationId> <tokenId> --latest
  *
  * Note the flag is --to-version (not --version) to avoid clobbering
  * Commander's program-level --version flag.
@@ -42,7 +42,7 @@ interface PinOptions {
 
 export const pinCommand = new Command('pin')
   .description(`Set a token's version mode: pin to a specific version or follow latest`)
-  .argument('<shareId>', 'Presentation shareId')
+  .argument('<presentationId>', 'Presentation presentationId')
   .argument('<tokenId>', 'Token to update')
   .option('--to-version <n>', 'Pin to a specific version number (positive integer)')
   .option('--latest', 'Follow the latest version (default on new tokens)')
@@ -50,7 +50,7 @@ export const pinCommand = new Command('pin')
   .option('--api-url <url>', 'Override base URL')
   .option('--profile <name>', 'Use a specific profile')
   .option('--json', 'Output as JSON')
-  .action(async (shareId: string, tokenId: string, options: PinOptions) => {
+  .action(async (presentationId: string, tokenId: string, options: PinOptions) => {
     const apiKey = resolveApiKey(options.apiKey, options.profile);
     if (!apiKey) {
       if (options.json) emitJsonError({ code: 'unauthenticated', message: API_KEY_MISSING_MESSAGE });
@@ -84,7 +84,7 @@ export const pinCommand = new Command('pin')
       apiKey,
       apiUrl: options.apiUrl,
       profileName: options.profile,
-      shareId,
+      presentationId,
       tokenId,
       versionMode,
     });

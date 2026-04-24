@@ -1,5 +1,6 @@
 /**
- * API response types — mirrors functions/src/features/shared-presentations/types.
+ * API response types — mirrors functions/src/features/shared-presentations/types
+ * and functions/src/features/presentation-collaborators/types.
  *
  * Keep in sync when the backend types change.
  */
@@ -18,7 +19,7 @@ export interface ManifestFileInput {
 export interface PrecheckAssetsOutput {
   missing: string[];
   sessionId?: string;
-  shareId?: string;
+  presentationId?: string;
 }
 
 export interface UploadPresentationAssetOutput {
@@ -27,11 +28,9 @@ export interface UploadPresentationAssetOutput {
 }
 
 export interface CommitPresentationVersionOutput {
-  shareId: string;
+  presentationId: string;
   version: number;
-  tokenId?: string;
-  token?: string;
-  shareUrl: string;
+  role: 'owner' | 'dev';
 }
 
 export interface ListMyPresentationsItem {
@@ -40,10 +39,12 @@ export interface ListMyPresentationsItem {
   currentVersion: number;
   createdAt: string;
   updatedAt: string;
-  archived: boolean;
   totalViews: number;
   lastViewedAt: string | null;
   shareUrl: string | null;
+  role: 'owner' | 'dev';
+  hasActiveCollaborators: boolean;
+  ownerDisplayName: string | null;
 }
 
 export interface ListMyPresentationsOutput {
@@ -62,10 +63,22 @@ export interface PresentationTokenInfo {
   versionMode: TokenVersionMode;
 }
 
+export interface CollaboratorInfo {
+  collaboratorId: string;
+  email: string;
+  userId: string | null;
+  role: 'dev';
+  status: 'pending' | 'active' | 'revoked';
+  invitedAt: string;
+  invitedBy: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+}
+
 // ─── Share via email ─────────────────────────────────────
 
 export interface SharePresentationViaEmailInput {
-  shareId: string;
+  presentationId: string;
   emails: string[];
   message?: string;
   subject?: string;
@@ -86,7 +99,7 @@ export interface SharePresentationViaEmailFailed {
 }
 
 export interface SharePresentationViaEmailOutput {
-  shareId: string;
+  presentationId: string;
   sent: SharePresentationViaEmailSent[];
   failed: SharePresentationViaEmailFailed[];
   summary: {
@@ -104,19 +117,25 @@ export interface PresentationInfo {
   currentVersion: number;
   createdAt: string;
   updatedAt: string;
-  archived: boolean;
-  archivedAt: string | null;
   expiresAt: string | null;
   totalViews: number;
   lastViewedAt: string | null;
   primaryShareUrl: string | null;
+  role: 'owner' | 'dev';
   tokens: PresentationTokenInfo[];
+  collaborators: CollaboratorInfo[];
 }
 
-// ─── Revoke / add token ──────────────────────────────────
+// ─── Unshare / delete / add token ─────────────────────────
 
-export interface RevokeSharedPresentationOutput {
-  success: boolean;
+export interface UnsharePresentationOutput {
+  presentationId: string;
+  tokensRevoked: number;
+}
+
+export interface DeletePresentationOutput {
+  presentationId: string;
+  blobsDeleted: number;
 }
 
 export interface AddPresentationTokenOutput {
@@ -130,6 +149,25 @@ export interface SetTokenVersionModeOutput {
   versionMode: TokenVersionMode;
 }
 
+// ─── Collaborators ────────────────────────────────────────
+
+export interface InviteCollaboratorOutput {
+  collaboratorId: string;
+  email: string;
+  status: 'pending' | 'active';
+  userId: string | null;
+  inviteAlreadyExisted: boolean;
+}
+
+export interface UninviteCollaboratorOutput {
+  collaboratorId: string;
+}
+
+export interface ListCollaboratorsOutput {
+  presentationId: string;
+  collaborators: CollaboratorInfo[];
+}
+
 // ─── Version history ─────────────────────────────────────
 
 export interface VersionSummary {
@@ -137,12 +175,13 @@ export interface VersionSummary {
   title: string;
   createdAt: string;
   createdBy: string;
+  createdByRole: 'owner' | 'dev';
   fileCount: number;
   totalBytes: number;
 }
 
 export interface ListPresentationVersionsOutput {
-  shareId: string;
+  presentationId: string;
   currentVersion: number;
   versions: VersionSummary[];
 }
@@ -154,4 +193,5 @@ export interface GetPresentationVersionOutput {
   files: ManifestFileInput[];
   createdAt: string;
   createdBy: string;
+  createdByRole: 'owner' | 'dev';
 }

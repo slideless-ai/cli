@@ -18,13 +18,16 @@ import { whoamiCommand } from './commands/whoami.js';
 import { useCommand } from './commands/use.js';
 import { logoutCommand } from './commands/logout.js';
 import { verifyCommand } from './commands/verify.js';
+import { pushCommand } from './commands/push.js';
+import { pullCommand } from './commands/pull.js';
 import { shareCommand } from './commands/share.js';
+import { unshareCommand } from './commands/unshare.js';
+import { deleteCommand } from './commands/delete.js';
+import { inviteCommand } from './commands/invite.js';
+import { uninviteCommand } from './commands/uninvite.js';
 import { shareEmailCommand } from './commands/share-email.js';
-import { updateCommand } from './commands/update.js';
 import { listCommand } from './commands/list.js';
 import { getCommand } from './commands/get.js';
-import { revokeCommand } from './commands/revoke.js';
-import { tokenCommand } from './commands/token.js';
 import { pinCommand } from './commands/pin.js';
 import { completionCommand } from './commands/completion.js';
 import { authCommand } from './commands/auth/index.js';
@@ -36,7 +39,7 @@ const { version: VERSION } = require('../../package.json');
 
 program
   .name('slideless')
-  .description('Slideless CLI — share, update, list, and inspect HTML presentations')
+  .description('Slideless CLI — push, pull, share, and collaborate on HTML presentations')
   .version(VERSION);
 
 program.addCommand(configCommand);
@@ -56,13 +59,28 @@ program.addCommand(whoamiCommand);
 program.addCommand(useCommand);
 program.addCommand(logoutCommand);
 program.addCommand(verifyCommand);
+
+// Content lifecycle
+program.addCommand(pushCommand);
+program.addCommand(pullCommand);
+
+// Sharing (viewer access)
 program.addCommand(shareCommand);
+program.addCommand(unshareCommand);
 program.addCommand(shareEmailCommand);
-program.addCommand(updateCommand);
+
+// Collaboration (editor access)
+program.addCommand(inviteCommand);
+program.addCommand(uninviteCommand);
+
+// Lifecycle (destructive)
+program.addCommand(deleteCommand);
+
+// Info
 program.addCommand(listCommand);
 program.addCommand(getCommand);
-program.addCommand(revokeCommand);
-program.addCommand(tokenCommand);
+
+// Misc
 program.addCommand(pinCommand);
 program.addCommand(completionCommand);
 program.addCommand(authCommand);
@@ -73,11 +91,11 @@ program.hook('preAction', () => {
 
   if (expiry.expired) {
     process.stderr.write(
-      yellow(`\u26A0 API key "${expiry.profileName}" expired on ${new Date(expiry.expiresAt).toLocaleDateString()}. Run 'slideless login' to refresh.`) + '\n'
+      yellow(`⚠ API key "${expiry.profileName}" expired on ${new Date(expiry.expiresAt).toLocaleDateString()}. Run 'slideless login' to refresh.`) + '\n'
     );
   } else if (expiry.daysLeft <= 7) {
     process.stderr.write(
-      yellow(`\u26A0 API key "${expiry.profileName}" expires in ${expiry.daysLeft} day${expiry.daysLeft !== 1 ? 's' : ''}. Run 'slideless login' to refresh.`) + '\n'
+      yellow(`⚠ API key "${expiry.profileName}" expires in ${expiry.daysLeft} day${expiry.daysLeft !== 1 ? 's' : ''}. Run 'slideless login' to refresh.`) + '\n'
     );
   }
 });

@@ -1,7 +1,7 @@
 /**
  * Asset Uploader — drives precheck → upload missing → commit for a deck.
  *
- * Called by `slideless share <folder>` and `slideless update <shareId> <folder>`.
+ * Called by `slideless share <folder>` and `slideless update <presentationId> <folder>`.
  * Emits progress callbacks so the CLI can render a live upload indicator.
  */
 
@@ -32,11 +32,13 @@ export interface UploadDeckOptions {
   apiKey: string;
   apiUrl?: string;
   profileName?: string;
-  shareId?: string;          // undefined for new-presentation flow
+  presentationId?: string;          // undefined for new-presentation flow
   title: string;
   entryPath: string;
   files: HashedFile[];
   manifestFiles: ManifestFileInput[];  // aligned with `files` by sha256
+  /** Optimistic-concurrency guard. Server returns 409 on mismatch. */
+  expectedBaseVersion?: number;
   onProgress?: (p: UploadProgress) => void;
 }
 
@@ -64,7 +66,18 @@ function wrapFailure<T>(r: Extract<ApiResult<T>, { success: false }>, phase: Upl
 }
 
 export async function uploadDeck(opts: UploadDeckOptions): Promise<UploadDeckResult> {
-  const { apiKey, apiUrl, profileName, shareId, title, entryPath, files, manifestFiles, onProgress } = opts;
+  const {
+    apiKey,
+    apiUrl,
+    profileName,
+    presentationId,
+    title,
+    entryPath,
+    files,
+    manifestFiles,
+    expectedBaseVersion,
+    onProgress,
+  } = opts;
   const report = (p: UploadProgress) => onProgress?.(p);
 
   // Deduplicate the hash list (a deck can reference the same blob at many paths).
@@ -76,13 +89,13 @@ export async function uploadDeck(opts: UploadDeckOptions): Promise<UploadDeckRes
     apiKey,
     apiUrl,
     profileName,
-    shareId,
+    presentationId,
     hashes: uniqueHashes,
   });
   if (!pre.success) return wrapFailure(pre, 'precheck');
 
-  const { missing, sessionId, shareId: reservedShareId } = pre.data;
-  const effectiveShareId = shareId ?? reservedShareId;
+  const { missing, sessionId, presentationId: reservedShareId } = pre.data;
+  const effectiveShareId = presentationId ?? reservedShareId;
   const missingSet = new Set(missing);
 
   // Build a path-per-hash picker so we upload one physical file per missing hash
@@ -109,7 +122,7 @@ export async function uploadDeck(opts: UploadDeckOptions): Promise<UploadDeckRes
       apiKey,
       apiUrl,
       profileName,
-      shareId: shareId,
+      presentationId: presentationId,
       sessionId: sessionId,
       sha256: f.sha256,
       contentType: m.contentType,
@@ -125,11 +138,12 @@ export async function uploadDeck(opts: UploadDeckOptions): Promise<UploadDeckRes
     apiKey,
     apiUrl,
     profileName,
-    shareId,
+    presentationId,
     sessionId,
     title,
     entryPath,
     files: manifestFiles,
+    expectedBaseVersion,
   });
   if (!commit.success) return wrapFailure(commit, 'commit');
 
@@ -150,7 +164,7 @@ export async function uploadDeck(opts: UploadDeckOptions): Promise<UploadDeckRes
       assetsUploaded: uploadedCount,
       assetsDeduped,
       totalBytes,
-      shareId: commit.data.shareId ?? effectiveShareId ?? '',
+      presentationId: commit.data.presentationId ?? effectiveShareId ?? '',
     },
   };
 }

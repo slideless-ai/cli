@@ -1,7 +1,7 @@
 {
   "name": "slideless",
-  "version": "0.3.0",
-  "description": "Official CLI for the Slideless presentation hosting platform: share, update, list, and manage HTML presentations from your terminal.",
+  "version": "0.5.0",
+  "description": "Official CLI for the Slideless presentation hosting platform: push, pull, share, invite collaborators, and manage HTML presentations from your terminal.",
   "type": "module",
   "bin": {
     "slideless": "./dist/cli/index.js"

@@ -50,10 +50,10 @@ describe('apiCall', () => {
 
   it('rejects 2xx responses that do not conform to the { success, data } envelope', async () => {
     global.fetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ shareId: '1', shareUrl: 'https://x' }), { status: 200 }),
+      new Response(JSON.stringify({ presentationId: '1', shareUrl: 'https://x' }), { status: 200 }),
     ) as any;
 
-    const result = await apiCall<{ shareId: string }>({ url: 'https://example.com/x', apiKey: 'k' });
+    const result = await apiCall<{ presentationId: string }>({ url: 'https://example.com/x', apiKey: 'k' });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.code).toBe('invalid-response-shape');

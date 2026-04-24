@@ -28,6 +28,7 @@ const BUILT_IN_IGNORES = [
   '.next/',
   '*.log',
   '.slidelessignore',
+  'slideless.json',
 ];
 
 export interface WalkedFile {

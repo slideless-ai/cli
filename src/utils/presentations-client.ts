@@ -18,8 +18,12 @@ import type {
   SetTokenVersionModeOutput,
   SharePresentationViaEmailInput,
   SharePresentationViaEmailOutput,
-  RevokeSharedPresentationOutput,
+  UnsharePresentationOutput,
+  DeletePresentationOutput,
   AddPresentationTokenOutput,
+  InviteCollaboratorOutput,
+  UninviteCollaboratorOutput,
+  ListCollaboratorsOutput,
   TokenVersionMode,
   UploadPresentationAssetOutput,
 } from '../types/api.js';
@@ -31,11 +35,11 @@ export interface SharedClientOptions {
 }
 
 export async function precheckAssets(
-  opts: SharedClientOptions & { shareId?: string; sessionId?: string; hashes: string[] },
+  opts: SharedClientOptions & { presentationId?: string; sessionId?: string; hashes: string[] },
 ): Promise<ApiResult<PrecheckAssetsOutput>> {
   const url = resolveEndpointUrl('precheckAssets', opts.apiUrl, opts.profileName);
   const body: Record<string, unknown> = { hashes: opts.hashes };
-  if (opts.shareId) body.shareId = opts.shareId;
+  if (opts.presentationId) body.presentationId = opts.presentationId;
   if (opts.sessionId) body.sessionId = opts.sessionId;
   return apiCall<PrecheckAssetsOutput>({ url, method: 'POST', apiKey: opts.apiKey, body });
 }
@@ -46,7 +50,7 @@ export async function precheckAssets(
  */
 export async function uploadPresentationAsset(
   opts: SharedClientOptions & {
-    shareId?: string;
+    presentationId?: string;
     sessionId?: string;
     sha256: string;
     contentType: string;
@@ -55,13 +59,10 @@ export async function uploadPresentationAsset(
 ): Promise<ApiResult<UploadPresentationAssetOutput>> {
   const url = resolveEndpointUrl('uploadPresentationAsset', opts.apiUrl, opts.profileName);
 
-  // Use native FormData + Blob (Node 20+). Buffers the file in memory —
-  // acceptable up to plan per-asset cap (50 MB free, up to 1 GB enterprise);
-  // swap to streaming for larger files if that becomes the bottleneck.
   const bytes = await readFile(opts.absolutePath);
   const blob = new Blob([bytes], { type: opts.contentType });
   const form = new FormData();
-  if (opts.shareId) form.append('shareId', opts.shareId);
+  if (opts.presentationId) form.append('presentationId', opts.presentationId);
   if (opts.sessionId) form.append('sessionId', opts.sessionId);
   form.append('sha256', opts.sha256);
   form.append('contentType', opts.contentType);
@@ -109,11 +110,12 @@ export async function uploadPresentationAsset(
 
 export async function commitPresentationVersion(
   opts: SharedClientOptions & {
-    shareId?: string;
+    presentationId?: string;
     sessionId?: string;
     title: string;
     entryPath: string;
     files: ManifestFileInput[];
+    expectedBaseVersion?: number;
   },
 ): Promise<ApiResult<CommitPresentationVersionOutput>> {
   const url = resolveEndpointUrl('commitPresentationVersion', opts.apiUrl, opts.profileName);
@@ -122,8 +124,11 @@ export async function commitPresentationVersion(
     entryPath: opts.entryPath,
     files: opts.files,
   };
-  if (opts.shareId) body.shareId = opts.shareId;
+  if (opts.presentationId) body.presentationId = opts.presentationId;
   if (opts.sessionId) body.sessionId = opts.sessionId;
+  if (typeof opts.expectedBaseVersion === 'number') {
+    body.expectedBaseVersion = opts.expectedBaseVersion;
+  }
   return apiCall<CommitPresentationVersionOutput>({
     url,
     method: 'POST',
@@ -148,7 +153,7 @@ export async function sharePresentationViaEmail(
 ): Promise<ApiResult<SharePresentationViaEmailOutput>> {
   const url = resolveEndpointUrl('sharePresentationViaEmail', opts.apiUrl, opts.profileName);
   const body: Record<string, unknown> = {
-    shareId: opts.shareId,
+    presentationId: opts.presentationId,
     emails: opts.emails,
   };
   if (opts.message !== undefined) body.message = opts.message;
@@ -163,20 +168,20 @@ export async function sharePresentationViaEmail(
 }
 
 export async function getSharedPresentationInfo(
-  opts: SharedClientOptions & { shareId: string },
+  opts: SharedClientOptions & { presentationId: string },
 ): Promise<ApiResult<PresentationInfo>> {
   const baseUrl = resolveBaseUrl(opts.apiUrl, opts.profileName);
-  const url = `${baseUrl}/getSharedPresentationInfo/${encodeURIComponent(opts.shareId)}`;
+  const url = `${baseUrl}/getSharedPresentationInfo/${encodeURIComponent(opts.presentationId)}`;
   return apiCall<PresentationInfo>({ url, method: 'GET', apiKey: opts.apiKey });
 }
 
-export async function revokeSharedPresentation(
-  opts: SharedClientOptions & { shareId: string; tokenId?: string },
-): Promise<ApiResult<RevokeSharedPresentationOutput>> {
-  const url = resolveEndpointUrl('revokeSharedPresentation', opts.apiUrl, opts.profileName);
-  const body: Record<string, unknown> = { shareId: opts.shareId };
+export async function unsharePresentation(
+  opts: SharedClientOptions & { presentationId: string; tokenId?: string },
+): Promise<ApiResult<UnsharePresentationOutput>> {
+  const url = resolveEndpointUrl('unsharePresentation', opts.apiUrl, opts.profileName);
+  const body: Record<string, unknown> = { presentationId: opts.presentationId };
   if (opts.tokenId !== undefined) body.tokenId = opts.tokenId;
-  return apiCall<RevokeSharedPresentationOutput>({
+  return apiCall<UnsharePresentationOutput>({
     url,
     method: 'POST',
     apiKey: opts.apiKey,
@@ -184,11 +189,23 @@ export async function revokeSharedPresentation(
   });
 }
 
+export async function deletePresentation(
+  opts: SharedClientOptions & { presentationId: string },
+): Promise<ApiResult<DeletePresentationOutput>> {
+  const url = resolveEndpointUrl('deletePresentation', opts.apiUrl, opts.profileName);
+  return apiCall<DeletePresentationOutput>({
+    url,
+    method: 'POST',
+    apiKey: opts.apiKey,
+    body: { presentationId: opts.presentationId },
+  });
+}
+
 export async function addPresentationToken(
-  opts: SharedClientOptions & { shareId: string; tokenName: string; versionMode?: TokenVersionMode },
+  opts: SharedClientOptions & { presentationId: string; tokenName: string; versionMode?: TokenVersionMode },
 ): Promise<ApiResult<AddPresentationTokenOutput>> {
   const url = resolveEndpointUrl('addPresentationToken', opts.apiUrl, opts.profileName);
-  const body: Record<string, unknown> = { shareId: opts.shareId, tokenName: opts.tokenName };
+  const body: Record<string, unknown> = { presentationId: opts.presentationId, tokenName: opts.tokenName };
   if (opts.versionMode) body.versionMode = opts.versionMode;
   return apiCall<AddPresentationTokenOutput>({
     url,
@@ -199,29 +216,86 @@ export async function addPresentationToken(
 }
 
 export async function setTokenVersionMode(
-  opts: SharedClientOptions & { shareId: string; tokenId: string; versionMode: TokenVersionMode },
+  opts: SharedClientOptions & { presentationId: string; tokenId: string; versionMode: TokenVersionMode },
 ): Promise<ApiResult<SetTokenVersionModeOutput>> {
   const url = resolveEndpointUrl('setTokenVersionMode', opts.apiUrl, opts.profileName);
   return apiCall<SetTokenVersionModeOutput>({
     url,
     method: 'POST',
     apiKey: opts.apiKey,
-    body: { shareId: opts.shareId, tokenId: opts.tokenId, versionMode: opts.versionMode },
+    body: { presentationId: opts.presentationId, tokenId: opts.tokenId, versionMode: opts.versionMode },
   });
 }
 
 export async function listPresentationVersions(
-  opts: SharedClientOptions & { shareId: string },
+  opts: SharedClientOptions & { presentationId: string },
 ): Promise<ApiResult<ListPresentationVersionsOutput>> {
   const baseUrl = resolveBaseUrl(opts.apiUrl, opts.profileName);
-  const url = `${baseUrl}/listPresentationVersions/${encodeURIComponent(opts.shareId)}`;
+  const url = `${baseUrl}/listPresentationVersions/${encodeURIComponent(opts.presentationId)}`;
   return apiCall<ListPresentationVersionsOutput>({ url, method: 'GET', apiKey: opts.apiKey });
 }
 
 export async function getPresentationVersion(
-  opts: SharedClientOptions & { shareId: string; version: number },
+  opts: SharedClientOptions & { presentationId: string; version: number },
 ): Promise<ApiResult<GetPresentationVersionOutput>> {
   const baseUrl = resolveBaseUrl(opts.apiUrl, opts.profileName);
-  const url = `${baseUrl}/getPresentationVersion/${encodeURIComponent(opts.shareId)}/${opts.version}`;
+  const url = `${baseUrl}/getPresentationVersion/${encodeURIComponent(opts.presentationId)}/${opts.version}`;
   return apiCall<GetPresentationVersionOutput>({ url, method: 'GET', apiKey: opts.apiKey });
+}
+
+// ─── Collaborators ────────────────────────────────────────
+
+export async function inviteCollaborator(
+  opts: SharedClientOptions & { presentationId: string; email: string; message?: string },
+): Promise<ApiResult<InviteCollaboratorOutput>> {
+  const url = resolveEndpointUrl('inviteCollaborator', opts.apiUrl, opts.profileName);
+  const body: Record<string, unknown> = {
+    presentationId: opts.presentationId,
+    email: opts.email,
+  };
+  if (opts.message !== undefined) body.message = opts.message;
+  return apiCall<InviteCollaboratorOutput>({
+    url,
+    method: 'POST',
+    apiKey: opts.apiKey,
+    body,
+  });
+}
+
+export async function uninviteCollaborator(
+  opts: SharedClientOptions & { presentationId: string; collaboratorId: string },
+): Promise<ApiResult<UninviteCollaboratorOutput>> {
+  const url = resolveEndpointUrl('uninviteCollaborator', opts.apiUrl, opts.profileName);
+  return apiCall<UninviteCollaboratorOutput>({
+    url,
+    method: 'POST',
+    apiKey: opts.apiKey,
+    body: { presentationId: opts.presentationId, collaboratorId: opts.collaboratorId },
+  });
+}
+
+export async function listCollaborators(
+  opts: SharedClientOptions & { presentationId: string },
+): Promise<ApiResult<ListCollaboratorsOutput>> {
+  const baseUrl = resolveBaseUrl(opts.apiUrl, opts.profileName);
+  const url = `${baseUrl}/listCollaborators/${encodeURIComponent(opts.presentationId)}`;
+  return apiCall<ListCollaboratorsOutput>({
+    url,
+    method: 'GET',
+    apiKey: opts.apiKey,
+  });
+}
+
+// ─── Streaming download for pull ──────────────────────────
+
+/**
+ * Build the URL for a single asset's streaming download endpoint.
+ */
+export function buildDownloadAssetUrl(
+  opts: { apiUrl?: string; profileName?: string; presentationId: string; sha256: string; version?: number },
+): string {
+  const baseUrl = resolveBaseUrl(opts.apiUrl, opts.profileName);
+  const qs = new URLSearchParams({ presentationId: opts.presentationId, sha256: opts.sha256 });
+  if (typeof opts.version === 'number') qs.set('version', String(opts.version));
+  return `${baseUrl}/downloadPresentationAsset?${qs.toString()}`;
 }

@@ -1,5 +1,8 @@
 /**
- * Show details for a single presentation, including per-token view counts.
+ * Show details for a single presentation.
+ *
+ * For owner callers: tokens + collaborators section.
+ * For dev collaborators: read-only view, no tokens / collaborators.
  */
 
 import { Command } from 'commander';
@@ -21,12 +24,12 @@ import {
 
 export const getCommand = new Command('get')
   .description('Show details for a single presentation')
-  .argument('<shareId>', 'The shareId to look up')
+  .argument('<presentationId>', 'The presentation ID to look up')
   .option('--api-key <key>', 'Override API key')
   .option('--api-url <url>', 'Override base URL')
   .option('--profile <name>', 'Use a specific profile')
   .option('--json', 'Output as JSON')
-  .action(async (shareId: string, options: {
+  .action(async (presentationId: string, options: {
     apiKey?: string;
     apiUrl?: string;
     profile?: string;
@@ -45,7 +48,7 @@ export const getCommand = new Command('get')
       apiKey,
       apiUrl: options.apiUrl,
       profileName: options.profile,
-      shareId,
+      presentationId: presentationId,
     });
 
     if (!result.success) {
@@ -69,36 +72,51 @@ export const getCommand = new Command('get')
 
     const p = result.data;
     console.log('');
-    console.log(`${p.title}${p.archived ? ' ' + yellow('[ARCHIVED]') : ''}`);
+    console.log(`${p.title}  ${yellow(`[${p.role}]`)}`);
     console.log('');
-    console.log(`  Share ID:     ${p.id}`);
-    console.log(`  Version:      ${p.currentVersion}`);
-    console.log(`  Created:      ${formatDate(p.createdAt)}`);
-    console.log(`  Updated:      ${formatDate(p.updatedAt)}`);
-    if (p.expiresAt) {
-      console.log(`  Expires:      ${formatDate(p.expiresAt)}`);
-    }
-    console.log(`  Total views:  ${p.totalViews}`);
-    if (p.lastViewedAt) {
-      console.log(`  Last viewed:  ${formatDate(p.lastViewedAt)}`);
-    }
-    if (p.primaryShareUrl) {
-      console.log(`  Share URL:    ${cyan(p.primaryShareUrl)}`);
-    }
-    console.log('');
-    console.log(`  Tokens (${p.tokens.length}):`);
-    for (const t of p.tokens) {
-      const status = t.revoked ? yellow('[REVOKED]') : '';
-      console.log(`    \u2022 ${t.name} ${status}`.trimEnd());
-      console.log(`      ID:           ${t.tokenId}`);
-      console.log(`      Created:      ${formatDate(t.createdAt)}`);
-      console.log(`      Views:        ${t.accessCount}`);
-      if (t.lastAccessedAt) {
-        console.log(`      Last access:  ${formatDate(t.lastAccessedAt)}`);
+    console.log(`  Presentation ID:  ${p.id}`);
+    console.log(`  Version:          ${p.currentVersion}`);
+    console.log(`  Created:          ${formatDate(p.createdAt)}`);
+    console.log(`  Updated:          ${formatDate(p.updatedAt)}`);
+    if (p.expiresAt) console.log(`  Expires:          ${formatDate(p.expiresAt)}`);
+    console.log(`  Total views:      ${p.totalViews}`);
+    if (p.lastViewedAt) console.log(`  Last viewed:      ${formatDate(p.lastViewedAt)}`);
+    if (p.primaryShareUrl) console.log(`  Primary URL:      ${cyan(p.primaryShareUrl)}`);
+
+    if (p.role === 'owner') {
+      console.log('');
+      console.log(`  Tokens (${p.tokens.length}):`);
+      if (p.tokens.length === 0) {
+        console.log(`    (none — run \`slideless share ${p.id}\` to mint a viewer URL)`);
       }
-      if (!t.revoked) {
-        console.log(`      URL:          ${cyan(t.shareUrl)}`);
+      for (const t of p.tokens) {
+        const status = t.revoked ? yellow('[REVOKED]') : '';
+        console.log(`    • ${t.name} ${status}`.trimEnd());
+        console.log(`      ID:           ${t.tokenId}`);
+        console.log(`      Created:      ${formatDate(t.createdAt)}`);
+        console.log(`      Views:        ${t.accessCount}`);
+        if (t.lastAccessedAt) console.log(`      Last access:  ${formatDate(t.lastAccessedAt)}`);
+        if (!t.revoked) console.log(`      URL:          ${cyan(t.shareUrl)}`);
       }
+
+      console.log('');
+      console.log(`  Collaborators (${p.collaborators.length}):`);
+      if (p.collaborators.length === 0) {
+        console.log(`    (none — run \`slideless invite ${p.id} --email <addr>\` to add one)`);
+      }
+      for (const c of p.collaborators) {
+        const status = c.status === 'active' ? '' : yellow(`[${c.status.toUpperCase()}]`);
+        console.log(`    • ${c.email} ${status}`.trimEnd());
+        console.log(`      ID:           ${c.collaboratorId}`);
+        console.log(`      Role:         ${c.role}`);
+        console.log(`      Invited:      ${formatDate(c.invitedAt)}`);
+        if (c.acceptedAt) console.log(`      Accepted:     ${formatDate(c.acceptedAt)}`);
+        if (c.revokedAt) console.log(`      Revoked:      ${formatDate(c.revokedAt)}`);
+      }
+    } else {
+      console.log('');
+      console.log(`  ${yellow('You have dev access via an active collaborator invite.')}`);
+      console.log(`  Run \`slideless pull ${p.id}\` to download the deck and edit it.`);
     }
     console.log('');
   });

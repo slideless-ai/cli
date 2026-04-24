@@ -5,9 +5,9 @@
  * open tracking); pass `--token-id` to reuse a single token for everyone.
  *
  * Usage:
- *   slideless share-email <shareId> --to alice@x.com
- *   slideless share-email <shareId> --to a@x.com --to b@x.com --message "Hi"
- *   slideless share-email <shareId> --to a@x.com --subject "Q2 Review deck" --token-id <id>
+ *   slideless share-email <presentationId> --to alice@x.com
+ *   slideless share-email <presentationId> --to a@x.com --to b@x.com --message "Hi"
+ *   slideless share-email <presentationId> --to a@x.com --subject "Q2 Review deck" --token-id <id>
  */
 
 import { Command } from 'commander';
@@ -39,7 +39,7 @@ function collect(value: string, previous: string[]): string[] {
 
 export const shareEmailCommand = new Command('share-email')
   .description('Send a shared presentation to one or more recipients by email')
-  .argument('<shareId>', 'Share ID of the presentation to email')
+  .argument('<presentationId>', 'Share ID of the presentation to email')
   .requiredOption('--to <email>', 'Recipient email (repeat for multiple; max 20)', collect, [] as string[])
   .option('--message <text>', `Optional personal note (max ${MAX_MESSAGE_LENGTH} chars)`)
   .option('--subject <text>', `Custom subject line (max ${MAX_SUBJECT_LENGTH} chars)`)
@@ -48,7 +48,7 @@ export const shareEmailCommand = new Command('share-email')
   .option('--api-url <url>', 'Override base URL')
   .option('--profile <name>', 'Use a specific profile')
   .option('--json', 'Output as JSON')
-  .action(async (shareId: string, options: {
+  .action(async (presentationId: string, options: {
     to: string[];
     message?: string;
     subject?: string;
@@ -113,7 +113,7 @@ export const shareEmailCommand = new Command('share-email')
       apiKey,
       apiUrl: options.apiUrl,
       profileName: options.profile,
-      shareId,
+      presentationId,
       emails,
       message: options.message,
       subject: options.subject,

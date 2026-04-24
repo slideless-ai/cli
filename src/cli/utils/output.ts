@@ -46,12 +46,22 @@ export function emitJsonSuccess(data: unknown): void {
 
 /**
  * Standard JSON output shape for failure.
+ *
+ * `status` is always emitted (as null when absent) so downstream scripts can
+ * always `jq -e .status` without branching on whether the error came from
+ * the server (has a status) or a client-side validation path (no status).
  */
 export function emitJsonError(
   error: { code: string; message: string; nextAction?: string; details?: Record<string, unknown> },
   status?: number,
 ): void {
-  console.log(JSON.stringify({ success: false, ...(status !== undefined && { status }), error }, null, 2));
+  console.log(
+    JSON.stringify(
+      { success: false, status: status ?? null, error },
+      null,
+      2,
+    ),
+  );
 }
 
 /**
