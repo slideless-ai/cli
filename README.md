@@ -13,19 +13,28 @@ npm install -g slideless
 ```bash
 # 1. Authenticate
 slideless login
-# (paste your cko_ key from the dashboard)
+# (paste your cko_ key from the dashboard — or use `slideless auth signup-request`
+# + `signup-complete` to create an account from the terminal)
 
-# 2. Share an HTML file
+# 2a. Share a folder with assets (images, video, 3D models, CSS, JS)
+slideless share ./my-deck --title "Q3 Pitch"
+# → Returns a public share URL. Relative paths in index.html just work.
+
+# 2b. Or share a single HTML file
 slideless share ./my-deck.html --title "Q3 Pitch"
-# → Returns a public share URL anyone can open in their browser.
 
-# 3. Update in place (URL stays the same, view counts preserved)
-slideless update <shareId> ./my-deck-v2.html
+# 3. Update in place (URL stays the same, view counts preserved,
+#    unchanged assets are deduplicated by SHA-256)
+slideless update <shareId> ./my-deck
 
-# 4. List your presentations
+# 4. Pin a specific recipient to a specific version
+slideless pin <shareId> <tokenId> --to-version 2
+slideless pin <shareId> <tokenId> --latest         # undo
+
+# 5. List your presentations
 slideless list
 
-# 5. See details (including per-token view counts)
+# 6. See details (including per-token view counts + version modes)
 slideless get <shareId>
 ```
 
@@ -102,10 +111,14 @@ or on failure:
 | `slideless whoami` | Show the active identity. |
 | `slideless use [name]` | List or switch profiles. |
 | `slideless verify` | Validate the active key against the backend. |
-| `slideless share <path>` | Upload an HTML file. `--title` required. `--update <shareId>` to replace existing. |
-| `slideless update <shareId> <path>` | Replace the HTML at an existing share. URL unchanged. |
+| `slideless share <path>` | Upload a deck (folder or `.html`). `--title` required. `--entry <file>` for folder mode (default `index.html`). `--update <shareId>` to replace existing. `--strict` to fail on unresolved refs. |
+| `slideless update <shareId> <path>` | Replace the deck at an existing share (folder or file). URL unchanged, unchanged files deduplicated. |
+| `slideless pin <shareId> <tokenId>` | Pin a token to a version (`--to-version N`) or follow latest (`--latest`). |
 | `slideless list` | List your presentations. |
-| `slideless get <shareId>` | Show details for one presentation, including per-token view counts. |
+| `slideless get <shareId>` | Show details for one presentation, including per-token view counts and version modes. |
+| `slideless token add <shareId> --name "..."` | Mint a new named share token on an existing presentation. |
+| `slideless revoke <shareId> [--token <tokenId>]` | Revoke a single token, or archive the whole presentation. |
+| `slideless share-email <shareId> --to <email>` | Email a deck to up to 20 recipients with per-recipient tracked tokens. |
 | `slideless config show\|set\|clear` | Manage the config file. |
 
 ### Error codes for agents

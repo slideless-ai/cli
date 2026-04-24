@@ -1,26 +1,43 @@
 /**
- * API response types — mirrors functions/src/features/shared-presentations/types/sharedPresentationTypes.ts.
+ * API response types — mirrors functions/src/features/shared-presentations/types.
  *
  * Keep in sync when the backend types change.
  */
 
-export interface UploadSharedPresentationOutput {
-  shareId: string;
-  tokenId: string;
-  token: string;
-  shareUrl: string;
+export type TokenVersionMode =
+  | { type: 'latest' }
+  | { type: 'pinned'; version: number };
+
+export interface ManifestFileInput {
+  path: string;
+  sha256: string;
+  size: number;
+  contentType: string;
 }
 
-export interface UpdateSharedPresentationOutput {
+export interface PrecheckAssetsOutput {
+  missing: string[];
+  sessionId?: string;
+  shareId?: string;
+}
+
+export interface UploadPresentationAssetOutput {
+  sha256: string;
+  size: number;
+}
+
+export interface CommitPresentationVersionOutput {
   shareId: string;
   version: number;
+  tokenId?: string;
+  token?: string;
   shareUrl: string;
 }
 
 export interface ListMyPresentationsItem {
   id: string;
   title: string;
-  version: number;
+  currentVersion: number;
   createdAt: string;
   updatedAt: string;
   archived: boolean;
@@ -42,6 +59,7 @@ export interface PresentationTokenInfo {
   lastAccessedAt: string | null;
   accessCount: number;
   shareUrl: string;
+  versionMode: TokenVersionMode;
 }
 
 // ─── Share via email ─────────────────────────────────────
@@ -83,7 +101,7 @@ export interface PresentationInfo {
   ownerId: string;
   organizationId: string;
   title: string;
-  version: number;
+  currentVersion: number;
   createdAt: string;
   updatedAt: string;
   archived: boolean;
@@ -105,4 +123,35 @@ export interface AddPresentationTokenOutput {
   tokenId: string;
   token: string;
   shareUrl: string;
+}
+
+export interface SetTokenVersionModeOutput {
+  success: boolean;
+  versionMode: TokenVersionMode;
+}
+
+// ─── Version history ─────────────────────────────────────
+
+export interface VersionSummary {
+  version: number;
+  title: string;
+  createdAt: string;
+  createdBy: string;
+  fileCount: number;
+  totalBytes: number;
+}
+
+export interface ListPresentationVersionsOutput {
+  shareId: string;
+  currentVersion: number;
+  versions: VersionSummary[];
+}
+
+export interface GetPresentationVersionOutput {
+  version: number;
+  title: string;
+  entryPath: string;
+  files: ManifestFileInput[];
+  createdAt: string;
+  createdBy: string;
 }

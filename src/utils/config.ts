@@ -47,10 +47,14 @@ export const PRODUCTION_BASE_URL = 'https://europe-west1-slideless-ai.cloudfunct
  */
 export const ENDPOINTS = {
   verifyApiKey: '/verifyApiKey',
-  uploadSharedPresentation: '/uploadSharedPresentation',
-  updateSharedPresentation: '/updateSharedPresentation',
+  precheckAssets: '/precheckAssets',
+  uploadPresentationAsset: '/uploadPresentationAsset',
+  commitPresentationVersion: '/commitPresentationVersion',
   revokeSharedPresentation: '/revokeSharedPresentation',
   addPresentationToken: '/addPresentationToken',
+  setTokenVersionMode: '/setTokenVersionMode',
+  listPresentationVersions: '/listPresentationVersions',
+  getPresentationVersion: '/getPresentationVersion',
   sharePresentationViaEmail: '/sharePresentationViaEmail',
   listMyPresentations: '/listMyPresentations',
   getSharedPresentationInfo: '/getSharedPresentationInfo',

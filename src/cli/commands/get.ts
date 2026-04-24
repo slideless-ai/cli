@@ -72,7 +72,7 @@ export const getCommand = new Command('get')
     console.log(`${p.title}${p.archived ? ' ' + yellow('[ARCHIVED]') : ''}`);
     console.log('');
     console.log(`  Share ID:     ${p.id}`);
-    console.log(`  Version:      ${p.version}`);
+    console.log(`  Version:      ${p.currentVersion}`);
     console.log(`  Created:      ${formatDate(p.createdAt)}`);
     console.log(`  Updated:      ${formatDate(p.updatedAt)}`);
     if (p.expiresAt) {

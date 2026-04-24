@@ -87,7 +87,7 @@ export const listCommand = new Command('list')
     for (const p of items) {
       const id = p.id.slice(0, idLen).padEnd(idLen);
       const title = (p.archived ? '[archived] ' + p.title : p.title).slice(0, titleLen).padEnd(titleLen);
-      const v = String(p.version).padEnd(versionLen);
+      const v = String(p.currentVersion).padEnd(versionLen);
       const views = String(p.totalViews).padEnd(viewsLen);
       const updated = formatDate(p.updatedAt).slice(0, updatedLen).padEnd(updatedLen);
       const url = p.shareUrl ? cyan(p.shareUrl) : '-';

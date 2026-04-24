@@ -25,6 +25,7 @@ import { listCommand } from './commands/list.js';
 import { getCommand } from './commands/get.js';
 import { revokeCommand } from './commands/revoke.js';
 import { tokenCommand } from './commands/token.js';
+import { pinCommand } from './commands/pin.js';
 import { completionCommand } from './commands/completion.js';
 import { authCommand } from './commands/auth/index.js';
 import { checkProfileExpiry } from '../utils/config.js';
@@ -62,6 +63,7 @@ program.addCommand(listCommand);
 program.addCommand(getCommand);
 program.addCommand(revokeCommand);
 program.addCommand(tokenCommand);
+program.addCommand(pinCommand);
 program.addCommand(completionCommand);
 program.addCommand(authCommand);
 

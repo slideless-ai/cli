@@ -1,6 +1,6 @@
 # Slideless CLI
 
-The `slideless` npm CLI. Wraps the Slideless HTTP API so users (and skills) can share, update, list, and inspect presentations from the terminal without hand-rolling fetch + auth + error handling each time.
+The `slideless` npm CLI. Wraps the Slideless HTTP API so users (and skills) can share, update, list, pin, and inspect presentations from the terminal without hand-rolling fetch + auth + error handling each time.
 
 ## Project structure
 
@@ -15,35 +15,40 @@ src/
       use.ts                # switch / list profiles
       verify.ts             # explicit key verification
       auth/
-        index.ts            # parent for OTP-based signup/login
         signup-request.ts   # POST /cliRequestSignupOtp
         signup-complete.ts  # POST /cliCompleteSignup + save profile
         login-request.ts    # POST /cliRequestLoginOtp
         login-complete.ts   # POST /cliCompleteLogin + save profile
       config/
-        index.ts            # parent
         set.ts              # save profile (interactive or --api-key)
         show.ts             # list all profiles
         clear.ts            # remove profile(s)
-      share.ts              # POST /uploadSharedPresentation OR /updateSharedPresentation (--update)
-      update.ts             # explicit update form: POST /updateSharedPresentation
+      share.ts              # Folder-or-file upload. precheck + asset upload + commit
+      update.ts             # Folder-or-file update. Same three-step flow on existing shareId
+      pin.ts                # POST /setTokenVersionMode — pin or follow latest
       list.ts               # GET /listMyPresentations
       get.ts                # GET /getSharedPresentationInfo/<id>
+      token/                # token add/list/… subcommands
+      revoke.ts             # POST /revokeSharedPresentation
+      share-email.ts        # POST /sharePresentationViaEmail
     utils/
       output.ts             # ANSI colors, --json formatter, exitWithError
       prompts.ts            # masked input for API key
   utils/
     config.ts               # multi-profile config at ~/.config/slideless/config.json
-    api-client.ts           # fetch wrapper, Authorization: Bearer, error decoding (propagates nextAction/details)
+    api-client.ts           # fetch wrapper, Authorization: Bearer, error decoding
     auth-client.ts          # verifyApiKey
     auth-flow-client.ts     # cliRequestSignupOtp / cliCompleteSignup / cliRequestLoginOtp / cliCompleteLogin
     logo-reader.ts          # read + validate + base64-encode a logo file for signup-complete
-    presentations-client.ts # share/update/list/get HTTP calls
+    presentations-client.ts # HTTP wrappers for every presentations endpoint
+    folder-walker.ts        # Recursive walk + SHA-256 hashing, .slidelessignore honored, symlink-escape guard
+    reference-scanner.ts    # Static scan of HTML/CSS for missing refs + parent-escape errors
+    manifest.ts             # MIME detection (mime-types + overrides for glb/gltf/glsl/wgsl/hdr/…)
+    asset-uploader.ts       # Orchestrates precheck → upload missing → commit with progress callbacks
   types/
     api.ts                  # mirrors functions/src/features/shared-presentations/types
 tests/
-  cli/                      # CLI integration tests
-  utils/                    # config resolution, error decoding tests
+  utils/                    # folder-walker, reference-scanner, manifest, api-client, config tests
 ```
 
 ## Stack
@@ -85,6 +90,16 @@ Endpoint paths live in `src/utils/config.ts` as a single `ENDPOINTS` constant. U
 - `exitWithError(message, code)` from `cli/utils/output.ts` for fatal errors.
 - HTTP clients return `{ success, data, error }` discriminated unions — never throw across the boundary.
 
+## Upload flow
+
+`share` and `update` are the heavyweight commands. They orchestrate a three-step content-addressed upload:
+
+1. **Walk + hash** — `folder-walker.ts` recurses the folder (honoring `.slidelessignore` + built-in ignores) and computes SHA-256 streaming. Single-file mode trims the walk to one entry.
+2. **Static scan** — `reference-scanner.ts` parses HTML + CSS for relative refs. Parent-escape (`../…`) is always a hard error; missing refs are warnings by default, errors with `--strict`.
+3. **Orchestrate HTTP** — `asset-uploader.ts` calls `precheckAssets` → `uploadPresentationAsset` per missing blob → `commitPresentationVersion`. Emits progress events.
+
+Adding a new upload-flow behavior almost always touches one of those four files. Backend-side contracts live in `types/api.ts`, which mirrors `functions/src/features/shared-presentations/types/` in the app repo.
+
 ## Local development
 
 ```bash
@@ -94,7 +109,8 @@ npm link            # makes `slideless` available on PATH
 
 slideless login     # interactive, against production
 slideless whoami
-slideless share ./test.html --title "test"
+slideless share ./my-deck --title "test"      # folder
+slideless share ./test.html --title "test"    # single file
 ```
 
 To target a non-production backend (e.g. a local emulator):
