@@ -7,8 +7,11 @@
  * want to accidentally change).
  *
  * Usage:
- *   slideless pin <shareId> <tokenId> --version <N>
+ *   slideless pin <shareId> <tokenId> --to-version <N>
  *   slideless pin <shareId> <tokenId> --latest
+ *
+ * Note the flag is --to-version (not --version) to avoid clobbering
+ * Commander's program-level --version flag.
  */
 
 import { Command } from 'commander';

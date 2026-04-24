@@ -80,6 +80,12 @@ export const updateCommand = new Command('update')
     if (stats.isFile()) {
       deckRoot = dirname(abs);
       entryPath = basename(abs);
+      if (options.entry && options.entry !== entryPath) {
+        const msg = `--entry ${options.entry} conflicts with the file you passed (${entryPath}).`;
+        if (options.json) emitJsonError({ code: 'invalid-argument', message: msg });
+        else exitWithError(msg, 1);
+        process.exit(1);
+      }
     } else if (stats.isDirectory()) {
       deckRoot = abs;
       entryPath = options.entry || 'index.html';
