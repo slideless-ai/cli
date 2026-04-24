@@ -106,6 +106,48 @@ describe('scanReferences', () => {
     expect(warns.some((w) => w.reference.includes('reset.css'))).toBe(true);
   });
 
+  it('handles @font-face src url() with trailing format() hint', () => {
+    const s = useSetup({
+      'index.html': `<link rel="stylesheet" href="./styles.css">`,
+      'styles.css': `
+        @font-face {
+          font-family: 'Inter';
+          font-weight: 400;
+          font-display: swap;
+          src: url('./fonts/Inter-Regular.woff2') format('woff2');
+        }
+        @font-face {
+          font-family: 'Inter';
+          font-weight: 700;
+          src: url("./fonts/Inter-Bold.woff2") format('woff2'),
+               url("./fonts/Inter-Bold.woff") format('woff');
+        }
+      `,
+      'fonts/Inter-Regular.woff2': 'x',
+      // Inter-Bold.woff2 + Inter-Bold.woff intentionally missing
+    });
+    const r = scanReferences({ deckRoot: s.root, files: s.files });
+
+    // No parent-escape errors — these are all deck-relative.
+    expect(r.errors).toEqual([]);
+
+    // Existing font file produces no warning.
+    expect(
+      r.warnings.some((w) => w.reference.includes('Inter-Regular.woff2')),
+    ).toBe(false);
+
+    // Missing font files are reported as warnings on the correct file/line.
+    const missingBold = r.warnings.filter((w) => w.reference.includes('Inter-Bold'));
+    expect(missingBold.some((w) => w.reference.includes('woff2'))).toBe(true);
+    expect(missingBold.some((w) => w.reference.includes('.woff'))).toBe(true);
+    expect(missingBold.every((w) => w.file === 'styles.css')).toBe(true);
+
+    // The format(...) hint must NOT be treated as a reference.
+    expect(r.warnings.some((w) => w.reference.includes('woff2)'))).toBe(false);
+    expect(r.warnings.some((w) => w.reference === 'woff2')).toBe(false);
+    expect(r.errors.some((e) => e.reference === 'woff2')).toBe(false);
+  });
+
   it('strips ?query and #fragment before resolving', () => {
     const s = useSetup({
       'index.html': `<img src="./hero.jpg?v=2"><a href="./page.html#section">x</a>`,
