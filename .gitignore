@@ -34,3 +34,6 @@ coverage/
 .npm/
 .pnpm-store/
 .yarn/
+
+# ── Entire ───────────────────────────────────────────────────
+.entire/
