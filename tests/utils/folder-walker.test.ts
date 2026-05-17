@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { walkDeck, hashFiles } from '../../src/utils/folder-walker.js';
+import { walkDeck, walkSingleFile, hashFiles } from '../../src/utils/folder-walker.js';
 
 describe('walkDeck', () => {
   let root: string;
@@ -75,6 +75,49 @@ describe('walkDeck', () => {
     const filePath = join(root, 'file.html');
     writeFileSync(filePath, 'hi');
     expect(() => walkDeck(filePath)).toThrow(/Not a directory/);
+  });
+});
+
+describe('walkSingleFile', () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'slideless-single-'));
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('returns exactly the one file, keyed by basename', () => {
+    writeFileSync(join(root, 'deck.html'), '<html></html>');
+
+    const result = walkSingleFile(join(root, 'deck.html'));
+    expect(result.files.map((f) => f.path)).toEqual(['deck.html']);
+    expect(result.totalBytes).toBe(result.files[0].size);
+  });
+
+  it('does not walk sibling files', () => {
+    writeFileSync(join(root, 'index.html'), '<html></html>');
+    writeFileSync(join(root, 'other.html'), '<html>other</html>');
+    mkdirSync(join(root, 'assets'));
+    writeFileSync(join(root, 'assets', 'big.bin'), 'x'.repeat(1000));
+
+    const result = walkSingleFile(join(root, 'index.html'));
+    expect(result.files.map((f) => f.path)).toEqual(['index.html']);
+  });
+
+  it('throws when the target is a directory', () => {
+    mkdirSync(join(root, 'sub'));
+    expect(() => walkSingleFile(join(root, 'sub'))).toThrow(/Not a file/);
+  });
+
+  it('follows a symlink to a sibling file without walking the tree', () => {
+    writeFileSync(join(root, 'real.html'), '<html></html>');
+    symlinkSync(join(root, 'real.html'), join(root, 'link.html'));
+
+    const result = walkSingleFile(join(root, 'link.html'));
+    expect(result.files.map((f) => f.path)).toEqual(['link.html']);
   });
 });
 

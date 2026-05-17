@@ -8,7 +8,7 @@
 
 import { createReadStream, readFileSync, realpathSync, statSync, lstatSync } from 'fs';
 import { readdirSync, existsSync } from 'fs';
-import { relative, resolve, join, sep } from 'path';
+import { basename, relative, resolve, join, sep } from 'path';
 import { createHash } from 'crypto';
 import { createRequire } from 'module';
 import type { Ignore } from 'ignore';
@@ -133,6 +133,37 @@ export function walkDeck(rootPath: string): WalkResult {
   // Deterministic order for predictable manifests and progress output.
   files.sort((a, b) => a.path.localeCompare(b.path));
   return { files, totalBytes };
+}
+
+/**
+ * Build a single-entry deck from one file. Used when the push target is a
+ * single HTML file rather than a folder — no directory walk happens, so
+ * sibling files are never touched and the symlink-escape guard on unrelated
+ * folders is never tripped.
+ *
+ * The returned file's `path` is the file's basename (the deck is treated as
+ * if it contained only this one entry at its root).
+ */
+export function walkSingleFile(filePath: string): WalkResult {
+  const abs = resolve(filePath);
+  const lstats = lstatSync(abs);
+
+  if (lstats.isSymbolicLink()) {
+    const real = realpathSync(abs);
+    const realStats = statSync(real);
+    if (!realStats.isFile()) {
+      throw new Error(`Not a file: ${filePath}`);
+    }
+    const size = realStats.size;
+    return { files: [{ path: basename(abs), absolute: abs, size }], totalBytes: size };
+  }
+
+  if (!lstats.isFile()) {
+    throw new Error(`Not a file: ${filePath}`);
+  }
+
+  const size = lstats.size;
+  return { files: [{ path: basename(abs), absolute: abs, size }], totalBytes: size };
 }
 
 /** Hash all walked files, streaming so large files don't blow memory. */

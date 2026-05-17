@@ -7,8 +7,6 @@
  * - Has `slideless.json` → update. Calls commit with `expectedBaseVersion`
  *   so concurrent collaborators can't stomp each other. `--force` bypasses.
  *
- * Replaces the pre-v0.5 `share <path>` and `update <id> <path>` commands.
- *
  * Usage:
  *   slideless push                                 # cwd, uses slideless.json
  *   slideless push ./my-deck --title "Q2 Review"   # new
@@ -24,7 +22,7 @@ import {
   resolveApiKey,
   API_KEY_MISSING_MESSAGE,
 } from '../../utils/config.js';
-import { walkDeck, hashFiles } from '../../utils/folder-walker.js';
+import { walkDeck, walkSingleFile, hashFiles } from '../../utils/folder-walker.js';
 import { scanReferences } from '../../utils/reference-scanner.js';
 import { buildManifestFiles } from '../../utils/manifest.js';
 import { uploadDeck } from '../../utils/asset-uploader.js';
@@ -154,20 +152,15 @@ export const pushCommand = new Command('push')
       }
     }
 
-    // Walk + hash.
+    // Walk + hash. Single-file pushes never walk sibling files.
     let walked;
     try {
-      walked = walkDeck(deckRoot);
+      walked = stats.isFile() ? walkSingleFile(abs) : walkDeck(deckRoot);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (jsonMode) emitJsonError({ code: 'invalid-argument', message: msg });
       else exitWithError(msg, 1);
       process.exit(1);
-    }
-
-    if (stats.isFile()) {
-      walked.files = walked.files.filter((f) => f.path === entryPath);
-      walked.totalBytes = walked.files.reduce((a, f) => a + f.size, 0);
     }
 
     if (!walked.files.some((f) => f.path === entryPath)) {
