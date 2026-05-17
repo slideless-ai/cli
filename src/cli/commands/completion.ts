@@ -61,7 +61,8 @@ _slideless_completions() {
     esac
   done
 
-  local commands="login logout whoami use profiles verify config share update list get completion"
+  local commands="config login logout whoami use profiles verify push pull share unshare share-email invite uninvite delete list get publish unpublish remix search listing star unstar stars pin completion auth"
+  local common_auth="--api-key --api-url --profile --json"
 
   case "$cmd" in
     config)
@@ -71,7 +72,7 @@ _slideless_completions() {
       fi
       case "$subcmd" in
         set)
-          COMPREPLY=( $(compgen -W "--api-key --base-url --name --skip-verify" -- "$cur") )
+          COMPREPLY=( $(compgen -W "--api-key --api-url --name --skip-verify" -- "$cur") )
           return
           ;;
         show)
@@ -84,8 +85,28 @@ _slideless_completions() {
           ;;
       esac
       ;;
+    auth)
+      if [[ -z "$subcmd" ]]; then
+        COMPREPLY=( $(compgen -W "signup-request signup-complete login-request login-complete" -- "$cur") )
+        return
+      fi
+      case "$subcmd" in
+        signup-request|login-request)
+          COMPREPLY=( $(compgen -W "--email --api-url --json" -- "$cur") )
+          return
+          ;;
+        signup-complete)
+          COMPREPLY=( $(compgen -W "--email --code --first-name --last-name --company --description --brand-primary --brand-secondary --brand-accent --tone --logo --profile-name --key-name --key-expires-in --api-url --json" -- "$cur") )
+          return
+          ;;
+        login-complete)
+          COMPREPLY=( $(compgen -W "--email --code --profile-name --key-name --key-expires-in --api-url --json" -- "$cur") )
+          return
+          ;;
+      esac
+      ;;
     login)
-      COMPREPLY=( $(compgen -W "--api-key --base-url --name --skip-verify" -- "$cur") )
+      COMPREPLY=( $(compgen -W "--api-key --api-url --name --skip-verify" -- "$cur") )
       return
       ;;
     whoami)
@@ -93,7 +114,7 @@ _slideless_completions() {
       return
       ;;
     verify)
-      COMPREPLY=( $(compgen -W "--json --api-key --api-url --profile" -- "$cur") )
+      COMPREPLY=( $(compgen -W "$common_auth" -- "$cur") )
       return
       ;;
     use|profiles)
@@ -103,33 +124,93 @@ _slideless_completions() {
       return
       ;;
     logout)
-      local profiles
-      profiles=$(slideless use --list-names 2>/dev/null)
-      COMPREPLY=( $(compgen -W "$profiles" -- "$cur") )
+      if [[ "$cur" == -* ]]; then
+        COMPREPLY=( $(compgen -W "--json" -- "$cur") )
+      else
+        local profiles
+        profiles=$(slideless use --list-names 2>/dev/null)
+        COMPREPLY=( $(compgen -W "$profiles" -- "$cur") )
+      fi
+      return
+      ;;
+    push)
+      if [[ "$cur" == -* ]]; then
+        COMPREPLY=( $(compgen -W "--title --entry --message --force --strict $common_auth" -- "$cur") )
+      else
+        COMPREPLY=( $(compgen -d -- "$cur"; compgen -f -X '!*.html' -- "$cur") )
+      fi
+      return
+      ;;
+    pull)
+      COMPREPLY=( $(compgen -W "--at --force $common_auth" -- "$cur") )
       return
       ;;
     share)
-      if [[ "$cur" == -* ]]; then
-        COMPREPLY=( $(compgen -W "--title --update --api-key --api-url --profile --json" -- "$cur") )
-      else
-        COMPREPLY=( $(compgen -f -X '!*.html' -- "$cur") )
-      fi
+      COMPREPLY=( $(compgen -W "--name --to-version $common_auth" -- "$cur") )
       return
       ;;
-    update)
-      if [[ "$cur" == -* ]]; then
-        COMPREPLY=( $(compgen -W "--title --api-key --api-url --profile --json" -- "$cur") )
-      else
-        COMPREPLY=( $(compgen -f -X '!*.html' -- "$cur") )
-      fi
+    unshare)
+      COMPREPLY=( $(compgen -W "--token $common_auth" -- "$cur") )
       return
       ;;
-    list)
-      COMPREPLY=( $(compgen -W "--json --api-key --api-url --profile" -- "$cur") )
+    share-email)
+      COMPREPLY=( $(compgen -W "--message --subject --token-id $common_auth" -- "$cur") )
+      return
+      ;;
+    invite)
+      COMPREPLY=( $(compgen -W "--message $common_auth" -- "$cur") )
+      return
+      ;;
+    uninvite)
+      COMPREPLY=( $(compgen -W "$common_auth" -- "$cur") )
+      return
+      ;;
+    delete|unpublish)
+      COMPREPLY=( $(compgen -W "--yes $common_auth" -- "$cur") )
+      return
+      ;;
+    list|stars)
+      COMPREPLY=( $(compgen -W "$common_auth" -- "$cur") )
       return
       ;;
     get)
-      COMPREPLY=( $(compgen -W "--json --api-key --api-url --profile" -- "$cur") )
+      COMPREPLY=( $(compgen -W "$common_auth" -- "$cur") )
+      return
+      ;;
+    publish)
+      COMPREPLY=( $(compgen -W "--kind --interactive --description --slug --title --readme --tags --category --stack --to-version --thumbnail $common_auth" -- "$cur") )
+      return
+      ;;
+    remix)
+      COMPREPLY=( $(compgen -W "--force --api-url --profile --json" -- "$cur") )
+      return
+      ;;
+    search)
+      COMPREPLY=( $(compgen -W "--kind --tag --category --stack --sort --limit --api-url --profile --json" -- "$cur") )
+      return
+      ;;
+    listing)
+      if [[ -z "$subcmd" ]]; then
+        COMPREPLY=( $(compgen -W "get update" -- "$cur") )
+        return
+      fi
+      case "$subcmd" in
+        get)
+          COMPREPLY=( $(compgen -W "--api-url --profile --json" -- "$cur") )
+          return
+          ;;
+        update)
+          COMPREPLY=( $(compgen -W "--title --description --readme --tags --category --stack --status --interactive --no-interactive --republish-version $common_auth" -- "$cur") )
+          return
+          ;;
+      esac
+      ;;
+    star|unstar)
+      COMPREPLY=( $(compgen -W "$common_auth" -- "$cur") )
+      return
+      ;;
+    pin)
+      COMPREPLY=( $(compgen -W "--to-version --latest $common_auth" -- "$cur") )
       return
       ;;
     completion)
@@ -165,22 +246,45 @@ _slideless() {
   case $state in
     command)
       commands=(
+        'config:Manage CLI configuration'
         'login:Save API key (alias for "config set")'
         'logout:Remove a profile'
         'whoami:Show current authentication identity'
         'use:Switch active profile or list profiles'
         'profiles:List all profiles (alias for use)'
         'verify:Validate the active API key against the backend'
-        'config:Manage CLI configuration'
-        'share:Upload an HTML file as a public presentation'
-        'update:Replace the HTML at an existing share'
+        'push:Upload content (new presentation, or update an existing one)'
+        'pull:Download a presentation to a local folder'
+        'share:Mint a public viewer token for a presentation'
+        'unshare:Revoke a viewer token or archive a presentation'
+        'share-email:Email a deck to recipients with tracked tokens'
+        'invite:Invite a collaborator (editor access)'
+        'uninvite:Revoke a collaborator'
+        'delete:Delete a presentation'
         'list:List your presentations'
         'get:Show details for a single presentation'
+        'publish:Publish the current deck to the marketplace'
+        'unpublish:Remove a marketplace listing'
+        'remix:Clone a marketplace listing into a local folder'
+        'search:Search the marketplace'
+        'listing:Inspect or update a marketplace listing'
+        'star:Star a marketplace listing'
+        'unstar:Unstar a marketplace listing'
+        'stars:List your starred listings'
+        'pin:Set a token version mode'
         'completion:Generate shell completion scripts'
+        'auth:Email-OTP signup and login'
       )
       _describe 'command' commands
       ;;
     args)
+      local -a auth_flags
+      auth_flags=(
+        '--api-key[API key]:key:'
+        '--api-url[Base URL]:url:'
+        '--profile[Profile name]:profile:'
+        '--json[Output as JSON]'
+      )
       case $line[1] in
         config)
           _arguments -C '1:subcommand:->config_sub' '*::arg:->config_args'
@@ -202,7 +306,7 @@ _slideless() {
                 set)
                   _arguments \\
                     '--api-key[API key]:key:' \\
-                    '--base-url[Base URL override]:url:' \\
+                    '--api-url[Base URL override]:url:' \\
                     '--name[Custom profile name]:name:' \\
                     '--skip-verify[Save without verifying]'
                   ;;
@@ -213,10 +317,64 @@ _slideless() {
               ;;
           esac
           ;;
+        auth)
+          _arguments -C '1:subcommand:->auth_sub' '*::arg:->auth_args'
+          case $state in
+            auth_sub)
+              local -a auth_commands
+              auth_commands=(
+                'signup-request:Email a signup OTP'
+                'signup-complete:Complete signup with an OTP'
+                'login-request:Email a login OTP'
+                'login-complete:Complete login with an OTP'
+              )
+              _describe 'subcommand' auth_commands
+              ;;
+            auth_args)
+              case $line[1] in
+                signup-request|login-request)
+                  _arguments \\
+                    '--email[Email address]:email:' \\
+                    '--api-url[Base URL override]:url:' \\
+                    '--json[Output as JSON]'
+                  ;;
+                signup-complete)
+                  _arguments \\
+                    '--email[Email address]:email:' \\
+                    '--code[OTP code]:code:' \\
+                    '--first-name[First name]:name:' \\
+                    '--last-name[Last name]:name:' \\
+                    '--company[Organization name]:name:' \\
+                    '--description[Organization description]:text:' \\
+                    '--brand-primary[Brand primary color]:hex:' \\
+                    '--brand-secondary[Brand secondary color]:hex:' \\
+                    '--brand-accent[Brand accent color]:hex:' \\
+                    '--tone[Brand tone]:text:' \\
+                    '--logo[Logo file]:file:_files' \\
+                    '--profile-name[Local profile name]:name:' \\
+                    '--key-name[API key name]:name:' \\
+                    '--key-expires-in[Key expiry in days]:days:' \\
+                    '--api-url[Base URL override]:url:' \\
+                    '--json[Output as JSON]'
+                  ;;
+                login-complete)
+                  _arguments \\
+                    '--email[Email address]:email:' \\
+                    '--code[OTP code]:code:' \\
+                    '--profile-name[Local profile name]:name:' \\
+                    '--key-name[API key name]:name:' \\
+                    '--key-expires-in[Key expiry in days]:days:' \\
+                    '--api-url[Base URL override]:url:' \\
+                    '--json[Output as JSON]'
+                  ;;
+              esac
+              ;;
+          esac
+          ;;
         login)
           _arguments \\
             '--api-key[API key]:key:' \\
-            '--base-url[Base URL override]:url:' \\
+            '--api-url[Base URL override]:url:' \\
             '--name[Custom profile name]:name:' \\
             '--skip-verify[Save without verifying]'
           ;;
@@ -225,55 +383,126 @@ _slideless() {
             '--json[Output as JSON]' \\
             '--profile[Profile name]:profile:'
           ;;
-        verify)
-          _arguments \\
-            '--json[Output as JSON]' \\
-            '--api-key[API key]:key:' \\
-            '--api-url[Base URL]:url:' \\
-            '--profile[Profile name]:profile:'
+        verify|list|stars|get|star|unstar|uninvite)
+          _arguments \$auth_flags
           ;;
-        use|profiles)
+        use|profiles|logout)
           local -a profiles
           profiles=(\${(f)"$(slideless use --list-names 2>/dev/null)"})
           _describe 'profile' profiles
           ;;
-        logout)
-          local -a profiles
-          profiles=(\${(f)"$(slideless use --list-names 2>/dev/null)"})
-          _describe 'profile' profiles
+        push)
+          _arguments \$auth_flags \\
+            '--title[Display title]:title:' \\
+            '--entry[Entry HTML file]:file:' \\
+            '--message[Commit-like message]:msg:' \\
+            '--force[Bypass version-conflict check]' \\
+            '--strict[Fail on static-scan warnings]' \\
+            '*:deck:_files'
+          ;;
+        pull)
+          _arguments \$auth_flags \\
+            '--at[Pin to a specific version]:version:' \\
+            '--force[Overwrite a non-empty destination]' \\
+            '*:directory:_files -/'
           ;;
         share)
+          _arguments \$auth_flags \\
+            '--name[Token label]:name:' \\
+            '--to-version[Pin token to a version]:version:'
+          ;;
+        unshare)
+          _arguments \$auth_flags \\
+            '--token[Revoke only this token]:tokenId:'
+          ;;
+        share-email)
+          _arguments \$auth_flags \\
+            '--message[Personal note]:text:' \\
+            '--subject[Custom subject line]:text:' \\
+            '--token-id[Reuse an existing token]:tokenId:'
+          ;;
+        invite)
+          _arguments \$auth_flags \\
+            '--message[Personal invite message]:msg:'
+          ;;
+        delete|unpublish)
+          _arguments \$auth_flags \\
+            '--yes[Skip interactive confirmation]'
+          ;;
+        publish)
+          _arguments \$auth_flags \\
+            '--kind[Listing kind]:kind:(presentation app plan)' \\
+            '--interactive[Mark as interactive]' \\
+            '--description[Short description]:text:' \\
+            '--slug[Custom URL slug]:slug:' \\
+            '--title[Listing title]:title:' \\
+            '--readme[Longer markdown description]:text:' \\
+            '--tags[Comma-separated tags]:tags:' \\
+            '--category[Category]:category:' \\
+            '--stack[Tech stack slugs]:stack:' \\
+            '--to-version[Pin to a specific version]:version:' \\
+            '--thumbnail[Thumbnail asset path]:path:'
+          ;;
+        remix)
           _arguments \\
-            '--title[Display title]:title:' \\
-            '--update[Update existing share]:presentationId:' \\
-            '--api-key[API key]:key:' \\
             '--api-url[Base URL]:url:' \\
             '--profile[Profile name]:profile:' \\
             '--json[Output as JSON]' \\
-            '*:html file:_files -g "*.html"'
+            '--force[Overwrite a non-empty destination]' \\
+            '*:directory:_files -/'
           ;;
-        update)
+        search)
           _arguments \\
-            '--title[New title]:title:' \\
-            '--api-key[API key]:key:' \\
             '--api-url[Base URL]:url:' \\
             '--profile[Profile name]:profile:' \\
             '--json[Output as JSON]' \\
-            '*:html file:_files -g "*.html"'
+            '--kind[Filter by kind]:kind:(presentation app plan)' \\
+            '--tag[Filter by tag]:tag:' \\
+            '--category[Filter by category]:category:' \\
+            '--stack[Filter by technology]:tech:' \\
+            '--sort[Sort order]:sort:(recent popular stars)' \\
+            '--limit[Max results]:limit:'
           ;;
-        list)
-          _arguments \\
-            '--json[Output as JSON]' \\
-            '--api-key[API key]:key:' \\
-            '--api-url[Base URL]:url:' \\
-            '--profile[Profile name]:profile:'
+        listing)
+          _arguments -C '1:subcommand:->listing_sub' '*::arg:->listing_args'
+          case $state in
+            listing_sub)
+              local -a listing_commands
+              listing_commands=(
+                'get:Show a marketplace listing'
+                'update:Update a marketplace listing'
+              )
+              _describe 'subcommand' listing_commands
+              ;;
+            listing_args)
+              case $line[1] in
+                get)
+                  _arguments \\
+                    '--api-url[Base URL]:url:' \\
+                    '--profile[Profile name]:profile:' \\
+                    '--json[Output as JSON]'
+                  ;;
+                update)
+                  _arguments \$auth_flags \\
+                    '--title[New title]:title:' \\
+                    '--description[New description]:text:' \\
+                    '--readme[New readme]:text:' \\
+                    '--tags[Comma-separated tags]:tags:' \\
+                    '--category[New category]:category:' \\
+                    '--stack[Tech stack slugs]:stack:' \\
+                    '--status[Visibility]:status:(public unlisted)' \\
+                    '--interactive[Mark as interactive]' \\
+                    '--no-interactive[Mark as non-interactive]' \\
+                    '--republish-version[Re-pin to a newer version]:version:'
+                  ;;
+              esac
+              ;;
+          esac
           ;;
-        get)
-          _arguments \\
-            '--json[Output as JSON]' \\
-            '--api-key[API key]:key:' \\
-            '--api-url[Base URL]:url:' \\
-            '--profile[Profile name]:profile:'
+        pin)
+          _arguments \$auth_flags \\
+            '--to-version[Pin to a specific version]:version:' \\
+            '--latest[Follow the latest version]'
           ;;
         completion)
           _arguments -C \\
@@ -297,27 +526,49 @@ function generateFishCompletion(): string {
 complete -c slideless -f
 
 # Top-level commands
+complete -c slideless -n '__fish_use_subcommand' -a config -d 'Manage CLI configuration'
 complete -c slideless -n '__fish_use_subcommand' -a login -d 'Save API key'
 complete -c slideless -n '__fish_use_subcommand' -a logout -d 'Remove a profile'
 complete -c slideless -n '__fish_use_subcommand' -a whoami -d 'Show current identity'
 complete -c slideless -n '__fish_use_subcommand' -a use -d 'Switch or list profiles'
 complete -c slideless -n '__fish_use_subcommand' -a profiles -d 'List all profiles'
 complete -c slideless -n '__fish_use_subcommand' -a verify -d 'Validate the active API key'
-complete -c slideless -n '__fish_use_subcommand' -a config -d 'Manage CLI configuration'
-complete -c slideless -n '__fish_use_subcommand' -a share -d 'Upload an HTML file as a public presentation'
-complete -c slideless -n '__fish_use_subcommand' -a update -d 'Replace HTML at an existing share'
+complete -c slideless -n '__fish_use_subcommand' -a push -d 'Upload content (new or update)'
+complete -c slideless -n '__fish_use_subcommand' -a pull -d 'Download a presentation to a local folder'
+complete -c slideless -n '__fish_use_subcommand' -a share -d 'Mint a public viewer token'
+complete -c slideless -n '__fish_use_subcommand' -a unshare -d 'Revoke a viewer token'
+complete -c slideless -n '__fish_use_subcommand' -a share-email -d 'Email a deck to recipients'
+complete -c slideless -n '__fish_use_subcommand' -a invite -d 'Invite a collaborator'
+complete -c slideless -n '__fish_use_subcommand' -a uninvite -d 'Revoke a collaborator'
+complete -c slideless -n '__fish_use_subcommand' -a delete -d 'Delete a presentation'
 complete -c slideless -n '__fish_use_subcommand' -a list -d 'List your presentations'
 complete -c slideless -n '__fish_use_subcommand' -a get -d 'Show details for a single presentation'
+complete -c slideless -n '__fish_use_subcommand' -a publish -d 'Publish the current deck to the marketplace'
+complete -c slideless -n '__fish_use_subcommand' -a unpublish -d 'Remove a marketplace listing'
+complete -c slideless -n '__fish_use_subcommand' -a remix -d 'Clone a marketplace listing'
+complete -c slideless -n '__fish_use_subcommand' -a search -d 'Search the marketplace'
+complete -c slideless -n '__fish_use_subcommand' -a listing -d 'Inspect or update a marketplace listing'
+complete -c slideless -n '__fish_use_subcommand' -a star -d 'Star a marketplace listing'
+complete -c slideless -n '__fish_use_subcommand' -a unstar -d 'Unstar a marketplace listing'
+complete -c slideless -n '__fish_use_subcommand' -a stars -d 'List your starred listings'
+complete -c slideless -n '__fish_use_subcommand' -a pin -d 'Set a token version mode'
 complete -c slideless -n '__fish_use_subcommand' -a completion -d 'Generate shell completion'
+complete -c slideless -n '__fish_use_subcommand' -a auth -d 'Email-OTP signup and login'
 
 # config subcommands
 complete -c slideless -n '__fish_seen_subcommand_from config; and not __fish_seen_subcommand_from set show clear' -a set -d 'Save API key'
 complete -c slideless -n '__fish_seen_subcommand_from config; and not __fish_seen_subcommand_from set show clear' -a show -d 'Display configuration'
 complete -c slideless -n '__fish_seen_subcommand_from config; and not __fish_seen_subcommand_from set show clear' -a clear -d 'Remove configuration'
 
+# auth subcommands
+complete -c slideless -n '__fish_seen_subcommand_from auth; and not __fish_seen_subcommand_from signup-request signup-complete login-request login-complete' -a signup-request -d 'Email a signup OTP'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and not __fish_seen_subcommand_from signup-request signup-complete login-request login-complete' -a signup-complete -d 'Complete signup with an OTP'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and not __fish_seen_subcommand_from signup-request signup-complete login-request login-complete' -a login-request -d 'Email a login OTP'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and not __fish_seen_subcommand_from signup-request signup-complete login-request login-complete' -a login-complete -d 'Complete login with an OTP'
+
 # config set / login flags
 complete -c slideless -n '__fish_seen_subcommand_from login; or (__fish_seen_subcommand_from config; and __fish_seen_subcommand_from set)' -l api-key -d 'API key'
-complete -c slideless -n '__fish_seen_subcommand_from login; or (__fish_seen_subcommand_from config; and __fish_seen_subcommand_from set)' -l base-url -d 'Base URL override'
+complete -c slideless -n '__fish_seen_subcommand_from login; or (__fish_seen_subcommand_from config; and __fish_seen_subcommand_from set)' -l api-url -d 'Base URL override'
 complete -c slideless -n '__fish_seen_subcommand_from login; or (__fish_seen_subcommand_from config; and __fish_seen_subcommand_from set)' -l name -d 'Custom profile name'
 complete -c slideless -n '__fish_seen_subcommand_from login; or (__fish_seen_subcommand_from config; and __fish_seen_subcommand_from set)' -l skip-verify -d 'Save without verifying'
 
@@ -327,26 +578,113 @@ complete -c slideless -n '__fish_seen_subcommand_from config; and __fish_seen_su
 # config clear flags
 complete -c slideless -n '__fish_seen_subcommand_from config; and __fish_seen_subcommand_from clear' -l profile -d 'Profile to clear'
 
-# whoami / verify / list / get flags
-complete -c slideless -n '__fish_seen_subcommand_from whoami verify list get' -l json -d 'Output as JSON'
-complete -c slideless -n '__fish_seen_subcommand_from whoami verify list get share update' -l api-key -d 'API key'
-complete -c slideless -n '__fish_seen_subcommand_from whoami verify list get share update' -l api-url -d 'Base URL override'
-complete -c slideless -n '__fish_seen_subcommand_from whoami verify list get share update' -l profile -d 'Profile name'
+# auth flags
+complete -c slideless -n '__fish_seen_subcommand_from auth' -l email -d 'Email address'
+complete -c slideless -n '__fish_seen_subcommand_from auth' -l api-url -d 'Base URL override'
+complete -c slideless -n '__fish_seen_subcommand_from auth' -l json -d 'Output as JSON'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete login-complete' -l code -d 'OTP code'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete login-complete' -l profile-name -d 'Local profile name'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete login-complete' -l key-name -d 'API key name'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete login-complete' -l key-expires-in -d 'Key expiry in days'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete' -l first-name -d 'First name'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete' -l last-name -d 'Last name'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete' -l company -d 'Organization name'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete' -l description -d 'Organization description'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete' -l brand-primary -d 'Brand primary color'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete' -l brand-secondary -d 'Brand secondary color'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete' -l brand-accent -d 'Brand accent color'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete' -l tone -d 'Brand tone'
+complete -c slideless -n '__fish_seen_subcommand_from auth; and __fish_seen_subcommand_from signup-complete' -l logo -d 'Logo file'
 
-# share flags + .html files
-complete -c slideless -n '__fish_seen_subcommand_from share' -l title -d 'Display title'
-complete -c slideless -n '__fish_seen_subcommand_from share' -l update -d 'Update existing share'
-complete -c slideless -n '__fish_seen_subcommand_from share' -l json -d 'Output as JSON'
-complete -c slideless -n '__fish_seen_subcommand_from share' -F -a '*.html'
+# shared --json flag
+complete -c slideless -n '__fish_seen_subcommand_from whoami verify list get push pull share unshare share-email invite uninvite delete publish unpublish remix search star unstar stars pin' -l json -d 'Output as JSON'
 
-# update flags + .html files
-complete -c slideless -n '__fish_seen_subcommand_from update' -l title -d 'New title'
-complete -c slideless -n '__fish_seen_subcommand_from update' -l json -d 'Output as JSON'
-complete -c slideless -n '__fish_seen_subcommand_from update' -F -a '*.html'
+# shared auth flags (commands that talk to the backend)
+complete -c slideless -n '__fish_seen_subcommand_from verify list get push pull share unshare share-email invite uninvite delete publish unpublish star unstar stars pin' -l api-key -d 'API key'
+complete -c slideless -n '__fish_seen_subcommand_from verify list get push pull share unshare share-email invite uninvite delete publish unpublish remix search star unstar stars pin' -l api-url -d 'Base URL override'
+complete -c slideless -n '__fish_seen_subcommand_from verify list get push pull share unshare share-email invite uninvite delete publish unpublish remix search star unstar stars pin' -l profile -d 'Profile name'
+
+# push flags
+complete -c slideless -n '__fish_seen_subcommand_from push' -l title -d 'Display title'
+complete -c slideless -n '__fish_seen_subcommand_from push' -l entry -d 'Entry HTML file'
+complete -c slideless -n '__fish_seen_subcommand_from push' -l message -d 'Commit-like message'
+complete -c slideless -n '__fish_seen_subcommand_from push' -l force -d 'Bypass version-conflict check'
+complete -c slideless -n '__fish_seen_subcommand_from push' -l strict -d 'Fail on static-scan warnings'
+
+# pull flags
+complete -c slideless -n '__fish_seen_subcommand_from pull' -l at -d 'Pin to a specific version'
+complete -c slideless -n '__fish_seen_subcommand_from pull' -l force -d 'Overwrite a non-empty destination'
+
+# share flags
+complete -c slideless -n '__fish_seen_subcommand_from share; and not __fish_seen_subcommand_from share-email' -l name -d 'Token label'
+complete -c slideless -n '__fish_seen_subcommand_from share; and not __fish_seen_subcommand_from share-email' -l to-version -d 'Pin token to a version'
+
+# unshare flags
+complete -c slideless -n '__fish_seen_subcommand_from unshare' -l token -d 'Revoke only this token'
+
+# share-email flags
+complete -c slideless -n '__fish_seen_subcommand_from share-email' -l message -d 'Personal note'
+complete -c slideless -n '__fish_seen_subcommand_from share-email' -l subject -d 'Custom subject line'
+complete -c slideless -n '__fish_seen_subcommand_from share-email' -l token-id -d 'Reuse an existing token'
+
+# invite flags
+complete -c slideless -n '__fish_seen_subcommand_from invite' -l message -d 'Personal invite message'
+
+# delete / unpublish flags
+complete -c slideless -n '__fish_seen_subcommand_from delete unpublish' -l yes -d 'Skip interactive confirmation'
+
+# publish flags
+complete -c slideless -n '__fish_seen_subcommand_from publish' -l kind -d 'Listing kind' -a 'presentation app plan'
+complete -c slideless -n '__fish_seen_subcommand_from publish' -l interactive -d 'Mark as interactive'
+complete -c slideless -n '__fish_seen_subcommand_from publish' -l description -d 'Short description'
+complete -c slideless -n '__fish_seen_subcommand_from publish' -l slug -d 'Custom URL slug'
+complete -c slideless -n '__fish_seen_subcommand_from publish' -l title -d 'Listing title'
+complete -c slideless -n '__fish_seen_subcommand_from publish' -l readme -d 'Longer markdown description'
+complete -c slideless -n '__fish_seen_subcommand_from publish' -l tags -d 'Comma-separated tags'
+complete -c slideless -n '__fish_seen_subcommand_from publish' -l category -d 'Category'
+complete -c slideless -n '__fish_seen_subcommand_from publish' -l stack -d 'Tech stack slugs'
+complete -c slideless -n '__fish_seen_subcommand_from publish' -l to-version -d 'Pin to a specific version'
+complete -c slideless -n '__fish_seen_subcommand_from publish' -l thumbnail -d 'Thumbnail asset path'
+
+# remix flags
+complete -c slideless -n '__fish_seen_subcommand_from remix' -l force -d 'Overwrite a non-empty destination'
+
+# search flags
+complete -c slideless -n '__fish_seen_subcommand_from search' -l kind -d 'Filter by kind' -a 'presentation app plan'
+complete -c slideless -n '__fish_seen_subcommand_from search' -l tag -d 'Filter by tag'
+complete -c slideless -n '__fish_seen_subcommand_from search' -l category -d 'Filter by category'
+complete -c slideless -n '__fish_seen_subcommand_from search' -l stack -d 'Filter by technology'
+complete -c slideless -n '__fish_seen_subcommand_from search' -l sort -d 'Sort order' -a 'recent popular stars'
+complete -c slideless -n '__fish_seen_subcommand_from search' -l limit -d 'Max results'
+
+# listing subcommands
+complete -c slideless -n '__fish_seen_subcommand_from listing; and not __fish_seen_subcommand_from get update' -a get -d 'Show a marketplace listing'
+complete -c slideless -n '__fish_seen_subcommand_from listing; and not __fish_seen_subcommand_from get update' -a update -d 'Update a marketplace listing'
+complete -c slideless -n '__fish_seen_subcommand_from listing; and __fish_seen_subcommand_from update' -l title -d 'New title'
+complete -c slideless -n '__fish_seen_subcommand_from listing; and __fish_seen_subcommand_from update' -l description -d 'New description'
+complete -c slideless -n '__fish_seen_subcommand_from listing; and __fish_seen_subcommand_from update' -l readme -d 'New readme'
+complete -c slideless -n '__fish_seen_subcommand_from listing; and __fish_seen_subcommand_from update' -l tags -d 'Comma-separated tags'
+complete -c slideless -n '__fish_seen_subcommand_from listing; and __fish_seen_subcommand_from update' -l category -d 'New category'
+complete -c slideless -n '__fish_seen_subcommand_from listing; and __fish_seen_subcommand_from update' -l stack -d 'Tech stack slugs'
+complete -c slideless -n '__fish_seen_subcommand_from listing; and __fish_seen_subcommand_from update' -l status -d 'Visibility' -a 'public unlisted'
+complete -c slideless -n '__fish_seen_subcommand_from listing; and __fish_seen_subcommand_from update' -l interactive -d 'Mark as interactive'
+complete -c slideless -n '__fish_seen_subcommand_from listing; and __fish_seen_subcommand_from update' -l no-interactive -d 'Mark as non-interactive'
+complete -c slideless -n '__fish_seen_subcommand_from listing; and __fish_seen_subcommand_from update' -l republish-version -d 'Re-pin to a newer version'
+complete -c slideless -n '__fish_seen_subcommand_from listing' -l api-url -d 'Base URL override'
+complete -c slideless -n '__fish_seen_subcommand_from listing' -l profile -d 'Profile name'
+complete -c slideless -n '__fish_seen_subcommand_from listing' -l json -d 'Output as JSON'
+
+# pin flags
+complete -c slideless -n '__fish_seen_subcommand_from pin' -l to-version -d 'Pin to a specific version'
+complete -c slideless -n '__fish_seen_subcommand_from pin' -l latest -d 'Follow the latest version'
 
 # use / profiles / logout — dynamic profile names
 complete -c slideless -n '__fish_seen_subcommand_from use profiles logout' -a '(slideless use --list-names 2>/dev/null)' -d 'Profile'
 complete -c slideless -n '__fish_seen_subcommand_from use profiles' -l json -d 'Output as JSON'
+complete -c slideless -n '__fish_seen_subcommand_from logout' -l json -d 'Output as JSON'
+
+# whoami flags
+complete -c slideless -n '__fish_seen_subcommand_from whoami' -l profile -d 'Profile name'
 
 # completion subcommands and flags
 complete -c slideless -n '__fish_seen_subcommand_from completion' -a 'bash zsh fish' -d 'Shell type'

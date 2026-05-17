@@ -53,7 +53,7 @@ program.addCommand(configCommand);
 const loginCommand = new Command('login')
   .description('Save API key (alias for "config set")')
   .option('--api-key <key>', 'API key (skips interactive prompt)')
-  .option('--base-url <url>', 'Base URL override (default: production)')
+  .option('--api-url <url>', 'Base URL override (default: production)')
   .option('--name <name>', 'Custom profile name (auto-derived if omitted)')
   .option('--skip-verify', 'Save without verifying the key')
   .action(async (options) => {

@@ -4,7 +4,7 @@
  * Usage:
  *   slideless config set
  *   slideless config set --api-key <key>
- *   slideless config set --api-key <key> --base-url <url>
+ *   slideless config set --api-key <key> --api-url <url>
  *   slideless config set --name my-profile
  */
 
@@ -25,18 +25,18 @@ import { red, green, CHECK, CROSS } from '../../utils/output.js';
 
 export interface ConfigSetOptions {
   apiKey?: string;
-  baseUrl?: string;
+  apiUrl?: string;
   name?: string;
   skipVerify?: boolean;
 }
 
 export async function runConfigSet(options: ConfigSetOptions): Promise<void> {
   let apiKey = options.apiKey;
-  const baseUrl = options.baseUrl || PRODUCTION_BASE_URL;
+  const baseUrl = options.apiUrl || PRODUCTION_BASE_URL;
 
   if (options.apiKey === '') {
     console.error(`${red('Error:')} API key cannot be empty.`);
-    process.exit(2);
+    process.exit(1);
   }
 
   if (!apiKey) {
@@ -131,7 +131,7 @@ export async function runConfigSet(options: ConfigSetOptions): Promise<void> {
 export const configSetCommand = new Command('set')
   .description('Save API key and base URL to config file')
   .option('--api-key <key>', 'API key (skips interactive prompt)')
-  .option('--base-url <url>', 'Base URL override (default: production)')
+  .option('--api-url <url>', 'Base URL override (default: production)')
   .option('--name <name>', 'Custom profile name (auto-derived if omitted)')
   .option('--skip-verify', 'Save without verifying the key')
   .action(async (options: ConfigSetOptions) => {

@@ -42,7 +42,7 @@ interface Options {
   profileName?: string;
   keyName?: string;
   keyExpiresIn?: string;
-  baseUrl?: string;
+  apiUrl?: string;
   json?: boolean;
 }
 
@@ -62,7 +62,7 @@ export const signupCompleteCommand = new Command('signup-complete')
   .option('--profile-name <name>', 'Local profile name (auto-derived if omitted)')
   .option('--key-name <name>', 'Human-readable API key name')
   .option('--key-expires-in <days>', 'API key expiration in days (1-365)')
-  .option('--base-url <url>', 'Override API base URL')
+  .option('--api-url <url>', 'Override API base URL')
   .option('--json', 'Output as JSON')
   .action(async (options: Options) => {
     // Pre-load the logo if requested so we can fail fast client-side.
@@ -131,7 +131,7 @@ export const signupCompleteCommand = new Command('signup-complete')
           ...(expiresInDays !== undefined && { expiresInDays }),
         },
       }),
-      baseUrl: options.baseUrl,
+      baseUrl: options.apiUrl,
     });
 
     if (!result.success) {
@@ -172,7 +172,7 @@ export const signupCompleteCommand = new Command('signup-complete')
       scopes: result.data.apiKey.scopes,
       createdAt: result.data.apiKey.createdAt,
       expiresAt: result.data.apiKey.expiresAt ?? null,
-      ...(options.baseUrl && { baseUrl: options.baseUrl }),
+      ...(options.apiUrl && { baseUrl: options.apiUrl }),
     });
     setActiveProfile(profileName);
 

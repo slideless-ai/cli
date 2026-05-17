@@ -38,7 +38,7 @@ interface PublishOptions {
   tags?: string;
   category?: string;
   stack?: string;
-  version?: string;
+  toVersion?: string;
   thumbnail?: string;
   apiKey?: string;
   apiUrl?: string;
@@ -57,7 +57,7 @@ export const publishCommand = new Command('publish')
   .option('--tags <tags>', 'Comma-separated tags (e.g. pitch,startup)')
   .option('--category <category>', 'A single category (business, marketing, education, …)')
   .option('--stack <stack>', 'Tech stack as lowercase slugs, comma-separated (e.g. nextjs,firebase,n8n). One slug per technology; no display names, no versions.')
-  .option('--version <N>', 'Pin to a specific version (default: current)')
+  .option('--to-version <N>', 'Pin to a specific version (default: current)')
   .option('--thumbnail <path>', 'Manifest-relative path of a thumbnail asset')
   .option('--api-key <key>', 'Override API key')
   .option('--api-url <url>', 'Override base URL')
@@ -89,10 +89,10 @@ export const publishCommand = new Command('publish')
     if (!description) fail('invalid-argument', '--description is required.');
 
     let version: number | undefined;
-    if (options.version !== undefined) {
-      version = Number(options.version);
+    if (options.toVersion !== undefined) {
+      version = Number(options.toVersion);
       if (!Number.isInteger(version) || version < 1) {
-        fail('invalid-argument', '--version must be a positive integer.');
+        fail('invalid-argument', '--to-version must be a positive integer.');
       }
     }
 

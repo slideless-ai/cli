@@ -1,14 +1,13 @@
 /**
  * `slideless share` — mint a viewer token for an existing presentation.
  *
- * In v0.5 `share` does ONE thing: create a named viewer URL. Uploading is
- * handled by `push`; revoking is `unshare`. This replaces both the old
- * `share <path>` (upload) and `token add` (mint token) commands.
+ * `share` does ONE thing: create a named viewer URL. Uploading is handled by
+ * `push`; revoking is `unshare`.
  *
  * Usage:
  *   slideless share <id>                             # mints a "default" token
  *   slideless share <id> --name "Acme"               # named token
- *   slideless share <id> --pin 3                     # pin to version 3
+ *   slideless share <id> --to-version 3              # pin to version 3
  */
 
 import { Command } from 'commander';
@@ -33,7 +32,7 @@ import {
 
 interface ShareOptions {
   name?: string;
-  pin?: string;
+  toVersion?: string;
   apiKey?: string;
   apiUrl?: string;
   profile?: string;
@@ -44,7 +43,7 @@ export const shareCommand = new Command('share')
   .description('Mint a public viewer token for an existing presentation')
   .argument('<presentationId>', 'Presentation ID to share')
   .option('--name <name>', 'Human-readable label for the token (default: "default")')
-  .option('--pin <version>', 'Pin the token to a specific version (default: follows latest)')
+  .option('--to-version <n>', 'Pin the token to a specific version (default: follows latest)')
   .option('--api-key <key>', 'Override API key')
   .option('--api-url <url>', 'Override base URL')
   .option('--profile <name>', 'Use a specific profile')
@@ -61,10 +60,10 @@ export const shareCommand = new Command('share')
     }
 
     let versionMode: TokenVersionMode | undefined;
-    if (options.pin !== undefined) {
-      const v = Number(options.pin);
+    if (options.toVersion !== undefined) {
+      const v = Number(options.toVersion);
       if (!Number.isInteger(v) || v < 1) {
-        const msg = '--pin must be a positive integer';
+        const msg = '--to-version must be a positive integer';
         if (jsonMode) emitJsonError({ code: 'invalid-argument', message: msg });
         else exitWithError(msg, 1);
         process.exit(1);

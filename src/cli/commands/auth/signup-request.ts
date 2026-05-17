@@ -22,13 +22,13 @@ import {
 export const signupRequestCommand = new Command('signup-request')
   .description('Email a signup OTP to a new user')
   .requiredOption('--email <email>', 'Email address to sign up')
-  .option('--base-url <url>', 'Override API base URL')
+  .option('--api-url <url>', 'Override API base URL')
   .option('--json', 'Output as JSON')
   .action(
-    async (options: { email: string; baseUrl?: string; json?: boolean }) => {
+    async (options: { email: string; apiUrl?: string; json?: boolean }) => {
       const result = await signupRequest({
         email: options.email,
-        baseUrl: options.baseUrl,
+        baseUrl: options.apiUrl,
       });
 
       if (!result.success) {

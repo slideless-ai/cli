@@ -7,30 +7,42 @@ The `slideless` npm CLI. Wraps the Slideless HTTP API so users (and skills) can 
 ```
 src/
   cli/
-    index.ts                # Commander root, registers commands, preAction hook
+    index.ts                # Commander root, registers commands, preAction hook,
+                            #   and the `login` alias of `config set`
     commands/
-      login.ts              # save API key (alias of `config set`)
-      logout.ts
       whoami.ts             # POST /verifyApiKey + show identity
-      use.ts                # switch / list profiles
+      use.ts                # switch / list profiles (alias: `profiles`)
+      logout.ts             # remove a profile
       verify.ts             # explicit key verification
       auth/
+        index.ts            # `auth` parent command
         signup-request.ts   # POST /cliRequestSignupOtp
         signup-complete.ts  # POST /cliCompleteSignup + save profile
         login-request.ts    # POST /cliRequestLoginOtp
         login-complete.ts   # POST /cliCompleteLogin + save profile
       config/
+        index.ts            # `config` parent command
         set.ts              # save profile (interactive or --api-key)
-        show.ts             # list all profiles
+        show.ts             # show current configuration
         clear.ts            # remove profile(s)
-      share.ts              # Folder-or-file upload. precheck + asset upload + commit
-      update.ts             # Folder-or-file update. Same three-step flow on existing shareId
-      pin.ts                # POST /setTokenVersionMode — pin or follow latest
+      push.ts               # Folder-or-file upload (new or update); precheck + asset upload + commit
+      pull.ts               # Download a presentation to a local folder
+      share.ts              # Mint a public viewer token for a presentation
+      unshare.ts            # Revoke a viewer token, or archive a presentation
+      share-email.ts        # POST /sharePresentationViaEmail
+      invite.ts             # Invite a collaborator (editor access)
+      uninvite.ts           # Revoke a collaborator
+      delete.ts             # Delete a presentation
       list.ts               # GET /listMyPresentations
       get.ts                # GET /getSharedPresentationInfo/<id>
-      token/                # token add/list/… subcommands
-      revoke.ts             # POST /revokeSharedPresentation
-      share-email.ts        # POST /sharePresentationViaEmail
+      pin.ts                # POST /setTokenVersionMode — pin or follow latest
+      publish.ts            # Publish the current deck to the marketplace
+      unpublish.ts          # Remove a marketplace listing
+      remix.ts              # Clone a marketplace listing into a local folder
+      search.ts             # Search the marketplace
+      listing.ts            # Inspect (`get`) or update a marketplace listing
+      star.ts               # `star`, `unstar`, `stars` marketplace commands
+      completion.ts         # Generate bash/zsh/fish shell completion scripts
     utils/
       output.ts             # ANSI colors, --json formatter, exitWithError
       prompts.ts            # masked input for API key
@@ -41,14 +53,21 @@ src/
     auth-flow-client.ts     # cliRequestSignupOtp / cliCompleteSignup / cliRequestLoginOtp / cliCompleteLogin
     logo-reader.ts          # read + validate + base64-encode a logo file for signup-complete
     presentations-client.ts # HTTP wrappers for every presentations endpoint
-    folder-walker.ts        # Recursive walk + SHA-256 hashing, .slidelessignore honored, symlink-escape guard
+    marketplace-client.ts   # HTTP wrappers for the marketplace endpoints
+    local-manifest.ts       # read/write of the per-deck slideless.json manifest
+    remix-marker.ts         # read/write of the .slideless-remix.json lineage marker
+    folder-walker.ts        # Recursive walk + SHA-256 hashing, .slidelessignore honored,
+                            #   symlink-escape guard; walkSingleFile for single-file pushes
     reference-scanner.ts    # Static scan of HTML/CSS for missing refs + parent-escape errors
     manifest.ts             # MIME detection (mime-types + overrides for glb/gltf/glsl/wgsl/hdr/…)
     asset-uploader.ts       # Orchestrates precheck → upload missing → commit with progress callbacks
+    asset-downloader.ts     # Downloads version assets to disk for `pull` / `remix`
+    fs-helpers.ts           # Filesystem helpers shared by pull/remix
   types/
     api.ts                  # mirrors functions/src/features/shared-presentations/types
 tests/
-  utils/                    # folder-walker, reference-scanner, manifest, api-client, config tests
+  utils/                    # folder-walker, reference-scanner, manifest, api-client,
+                            #   config, auth-flow-client, local-manifest, logo-reader tests
 ```
 
 ## Stack
@@ -92,9 +111,9 @@ Endpoint paths live in `src/utils/config.ts` as a single `ENDPOINTS` constant. U
 
 ## Upload flow
 
-`share` and `update` are the heavyweight commands. They orchestrate a three-step content-addressed upload:
+`push` is the heavyweight command. It orchestrates a three-step content-addressed upload:
 
-1. **Walk + hash** — `folder-walker.ts` recurses the folder (honoring `.slidelessignore` + built-in ignores) and computes SHA-256 streaming. Single-file mode trims the walk to one entry.
+1. **Walk + hash** — `folder-walker.ts` recurses the folder (honoring `.slidelessignore` + built-in ignores) and computes SHA-256 streaming. Single-file pushes use `walkSingleFile`, which never walks sibling files.
 2. **Static scan** — `reference-scanner.ts` parses HTML + CSS for relative refs. Parent-escape (`../…`) is always a hard error; missing refs are warnings by default, errors with `--strict`.
 3. **Orchestrate HTTP** — `asset-uploader.ts` calls `precheckAssets` → `uploadPresentationAsset` per missing blob → `commitPresentationVersion`. Emits progress events.
 
@@ -109,8 +128,9 @@ npm link            # makes `slideless` available on PATH
 
 slideless login     # interactive, against production
 slideless whoami
-slideless share ./my-deck --title "test"      # folder
-slideless share ./test.html --title "test"    # single file
+slideless push ./my-deck --title "test"       # folder, new presentation
+slideless push ./test.html --title "test"     # single file, new presentation
+slideless push ./my-deck                       # update (reads slideless.json)
 ```
 
 To target a non-production backend (e.g. a local emulator):

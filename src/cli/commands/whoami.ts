@@ -27,7 +27,13 @@ export const whoamiCommand = new Command('whoami')
 
     if (!apiKey) {
       if (options.json) {
-        console.log(JSON.stringify({ success: false, data: { loggedIn: false } }, null, 2));
+        console.log(JSON.stringify({
+          success: false,
+          error: {
+            code: 'unauthenticated',
+            message: "Not logged in. Run 'slideless login' to authenticate.",
+          },
+        }, null, 2));
       } else {
         console.log('');
         console.log("Not logged in. Run 'slideless login' to authenticate.");
@@ -126,8 +132,7 @@ export const whoamiCommand = new Command('whoami')
     if (options.json) {
       console.log(JSON.stringify({
         success: false,
-        error: result.error,
-        data: { key: maskApiKey(apiKey), source: describeApiKeySource() },
+        error: { code: result.error.code, message: result.error.message },
       }, null, 2));
     } else {
       console.log('');

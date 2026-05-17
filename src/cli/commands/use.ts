@@ -24,6 +24,21 @@ export const useCommand = new Command('use')
     const profiles = listProfiles();
 
     if (profiles.length === 0) {
+      // Switching to a named profile when none exist is a user error;
+      // a plain list of "no profiles" is informational. Either way the
+      // exit code is deterministic and independent of --json.
+      if (name) {
+        if (options.json) {
+          console.log(JSON.stringify({
+            success: false,
+            error: { code: 'not-found', message: `Profile "${name}" not found. No profiles configured.` },
+          }, null, 2));
+        } else {
+          console.error(`${red('Error:')} Profile "${name}" not found. No profiles configured. Run 'slideless login' to add one.`);
+        }
+        process.exit(1);
+      }
+
       if (options.json) {
         console.log(JSON.stringify({ success: true, data: { activeProfile: null, profiles: [] } }, null, 2));
       } else {
@@ -31,7 +46,7 @@ export const useCommand = new Command('use')
         console.log("No profiles configured. Run 'slideless login' to add one.");
         console.log('');
       }
-      process.exit(profiles.length === 0 && !options.json ? 1 : 0);
+      process.exit(0);
     }
 
     if (!name) {
