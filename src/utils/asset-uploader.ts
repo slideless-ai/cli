@@ -39,6 +39,9 @@ export interface UploadDeckOptions {
   manifestFiles: ManifestFileInput[];  // aligned with `files` by sha256
   /** Optimistic-concurrency guard. Server returns 409 on mismatch. */
   expectedBaseVersion?: number;
+  /** Remix provenance — only applied when creating a new presentation. */
+  remixedFromSlug?: string;
+  remixedFromVersion?: number;
   onProgress?: (p: UploadProgress) => void;
 }
 
@@ -76,6 +79,8 @@ export async function uploadDeck(opts: UploadDeckOptions): Promise<UploadDeckRes
     files,
     manifestFiles,
     expectedBaseVersion,
+    remixedFromSlug,
+    remixedFromVersion,
     onProgress,
   } = opts;
   const report = (p: UploadProgress) => onProgress?.(p);
@@ -144,6 +149,9 @@ export async function uploadDeck(opts: UploadDeckOptions): Promise<UploadDeckRes
     entryPath,
     files: manifestFiles,
     expectedBaseVersion,
+    // Honored server-side only when creating a new presentation.
+    remixedFromSlug,
+    remixedFromVersion,
   });
   if (!commit.success) return wrapFailure(commit, 'commit');
 

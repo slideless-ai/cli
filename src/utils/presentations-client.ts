@@ -116,6 +116,8 @@ export async function commitPresentationVersion(
     entryPath: string;
     files: ManifestFileInput[];
     expectedBaseVersion?: number;
+    remixedFromSlug?: string;
+    remixedFromVersion?: number;
   },
 ): Promise<ApiResult<CommitPresentationVersionOutput>> {
   const url = resolveEndpointUrl('commitPresentationVersion', opts.apiUrl, opts.profileName);
@@ -128,6 +130,10 @@ export async function commitPresentationVersion(
   if (opts.sessionId) body.sessionId = opts.sessionId;
   if (typeof opts.expectedBaseVersion === 'number') {
     body.expectedBaseVersion = opts.expectedBaseVersion;
+  }
+  if (opts.remixedFromSlug) {
+    body.remixedFromSlug = opts.remixedFromSlug;
+    if (typeof opts.remixedFromVersion === 'number') body.remixedFromVersion = opts.remixedFromVersion;
   }
   return apiCall<CommitPresentationVersionOutput>({
     url,

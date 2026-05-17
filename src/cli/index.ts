@@ -29,6 +29,12 @@ import { shareEmailCommand } from './commands/share-email.js';
 import { listCommand } from './commands/list.js';
 import { getCommand } from './commands/get.js';
 import { pinCommand } from './commands/pin.js';
+import { publishCommand } from './commands/publish.js';
+import { unpublishCommand } from './commands/unpublish.js';
+import { remixCommand } from './commands/remix.js';
+import { searchCommand } from './commands/search.js';
+import { listingCommand } from './commands/listing.js';
+import { starCommand, unstarCommand, starsCommand } from './commands/star.js';
 import { completionCommand } from './commands/completion.js';
 import { authCommand } from './commands/auth/index.js';
 import { checkProfileExpiry } from '../utils/config.js';
@@ -79,6 +85,16 @@ program.addCommand(deleteCommand);
 // Info
 program.addCommand(listCommand);
 program.addCommand(getCommand);
+
+// Marketplace
+program.addCommand(publishCommand);
+program.addCommand(unpublishCommand);
+program.addCommand(remixCommand);
+program.addCommand(searchCommand);
+program.addCommand(listingCommand);
+program.addCommand(starCommand);
+program.addCommand(unstarCommand);
+program.addCommand(starsCommand);
 
 // Misc
 program.addCommand(pinCommand);

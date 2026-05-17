@@ -29,6 +29,7 @@ const BUILT_IN_IGNORES = [
   '*.log',
   '.slidelessignore',
   'slideless.json',
+  '.slideless-remix.json',
 ];
 
 export interface WalkedFile {

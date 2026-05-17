@@ -12,7 +12,7 @@
  */
 
 import { Command } from 'commander';
-import { existsSync, readdirSync, rmSync, statSync } from 'fs';
+import { existsSync, statSync } from 'fs';
 import { resolve } from 'path';
 
 import {
@@ -32,6 +32,7 @@ import {
   writeLocalManifest,
   LOCAL_MANIFEST_FILENAME,
 } from '../../utils/local-manifest.js';
+import { isDirEmpty, wipeDirectoryContents } from '../../utils/fs-helpers.js';
 import {
   exitWithError,
   emitJsonSuccess,
@@ -52,20 +53,6 @@ interface PullOptions {
   apiUrl?: string;
   profile?: string;
   json?: boolean;
-}
-
-function wipeDirectoryContents(dir: string): void {
-  for (const name of readdirSync(dir)) {
-    rmSync(resolve(dir, name), { recursive: true, force: true });
-  }
-}
-
-function isDirEmpty(dir: string): boolean {
-  try {
-    return readdirSync(dir).length === 0;
-  } catch {
-    return true;
-  }
 }
 
 export const pullCommand = new Command('pull')
@@ -195,7 +182,7 @@ export const pullCommand = new Command('pull')
       onProgress: (p) => {
         if (jsonMode) return;
         if (p.currentFile) {
-          console.log(`  ${cyan('↓')} [${p.completed + 1}/${p.total}] ${p.currentFile.path} (${formatBytes(p.currentFile.size)})`);
+          console.log(`  ${cyan('↓')} [${p.index ?? p.completed + 1}/${p.total}] ${p.currentFile.path} (${formatBytes(p.currentFile.size)})`);
         }
       },
     });

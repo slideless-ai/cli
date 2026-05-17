@@ -195,3 +195,79 @@ export interface GetPresentationVersionOutput {
   createdBy: string;
   createdByRole: 'owner' | 'dev';
 }
+
+// ─── Marketplace ──────────────────────────────────────────
+// Mirrors functions/src/features/marketplace/types/marketplaceTypes.ts
+
+export type MarketplaceKind = 'presentation' | 'app' | 'plan';
+export type MarketplaceStatus = 'public' | 'unlisted';
+
+export interface MarketplacePublicListing {
+  slug: string;
+  kind: MarketplaceKind;
+  status: MarketplaceStatus;
+  interactive: boolean;
+  title: string;
+  description: string;
+  tags: string[];
+  category: string | null;
+  authorDisplayName: string;
+  authorHandle: string;
+  thumbnailUrl: string | null;
+  previewUrl: string;
+  publishedVersion: number;
+  remixedFromSlug: string | null;
+  remixedFromTitle: string | null;
+  remixCount: number;
+  starCount: number;
+  viewCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetListingOutput extends MarketplacePublicListing {
+  readme: string | null;
+  entryPath: string;
+  fileCount: number;
+  totalBytes: number;
+}
+
+export interface ListListingsOutput {
+  listings: MarketplacePublicListing[];
+  nextCursor: string | null;
+}
+
+export interface PublishListingOutput {
+  slug: string;
+  kind: MarketplaceKind;
+  status: MarketplaceStatus;
+  publishedVersion: number;
+  marketplaceUrl: string;
+}
+
+export interface MarketplaceListingFilesOutput {
+  slug: string;
+  publishedVersion: number;
+  entryPath: string;
+  files: ManifestFileInput[];
+}
+
+export interface RecordRemixOutput {
+  slug: string;
+  remixCount: number;
+}
+
+export interface StarListingOutput {
+  slug: string;
+  starred: boolean;
+  starCount: number;
+}
+
+export interface ListMyStarredListingsOutput {
+  listings: MarketplacePublicListing[];
+}
+
+export interface ListMarketplaceRemixesOutput {
+  slug: string;
+  remixes: MarketplacePublicListing[];
+}

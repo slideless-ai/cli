@@ -33,6 +33,7 @@ import {
   readLocalManifest,
   writeLocalManifest,
 } from '../../utils/local-manifest.js';
+import { readRemixMarker } from '../../utils/remix-marker.js';
 import {
   exitWithError,
   emitJsonSuccess,
@@ -122,6 +123,8 @@ export const pushCommand = new Command('push')
     let presentationId: string | undefined;
     let expectedBaseVersion: number | undefined;
     let priorRole: 'owner' | 'dev' | undefined;
+    let remixedFromSlug: string | undefined;
+    let remixedFromVersion: number | undefined;
 
     if (existingManifest) {
       try {
@@ -142,6 +145,12 @@ export const pushCommand = new Command('push')
         if (jsonMode) emitJsonError({ code: 'invalid-argument', message: msg });
         else exitWithError(msg, 1);
         process.exit(1);
+      }
+      // If this folder was created by `slideless remix`, carry the lineage.
+      const remixMarker = readRemixMarker(deckRoot);
+      if (remixMarker) {
+        remixedFromSlug = remixMarker.remixedFromSlug;
+        remixedFromVersion = remixMarker.remixedFromVersion;
       }
     }
 
@@ -230,6 +239,8 @@ export const pushCommand = new Command('push')
       files: hashed,
       manifestFiles,
       expectedBaseVersion,
+      remixedFromSlug,
+      remixedFromVersion,
       onProgress: (p) => {
         if (jsonMode) return;
         if (p.phase === 'precheck') console.log(`  ${cyan('→')} Prechecking…`);

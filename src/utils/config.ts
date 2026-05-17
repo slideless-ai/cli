@@ -67,6 +67,19 @@ export const ENDPOINTS = {
   cliCompleteSignup: '/cliCompleteSignup',
   cliRequestLoginOtp: '/cliRequestLoginOtp',
   cliCompleteLogin: '/cliCompleteLogin',
+  // Marketplace
+  publishMarketplaceListing: '/publishMarketplaceListing',
+  updateMarketplaceListing: '/updateMarketplaceListing',
+  deleteMarketplaceListing: '/deleteMarketplaceListing',
+  listMarketplaceListings: '/listMarketplaceListings',
+  getMarketplaceListing: '/getMarketplaceListing',
+  getMarketplaceListingFiles: '/getMarketplaceListingFiles',
+  downloadMarketplaceAsset: '/downloadMarketplaceAsset',
+  recordMarketplaceRemix: '/recordMarketplaceRemix',
+  listMarketplaceRemixes: '/listMarketplaceRemixes',
+  starMarketplaceListing: '/starMarketplaceListing',
+  unstarMarketplaceListing: '/unstarMarketplaceListing',
+  listMyStarredListings: '/listMyStarredListings',
 } as const;
 
 // ── Config file path ─────────────────────────────────────

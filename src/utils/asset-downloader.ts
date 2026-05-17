@@ -16,20 +16,29 @@ import { buildDownloadAssetUrl } from './presentations-client.js';
 import type { ManifestFileInput } from '../types/api.js';
 
 export interface DownloadDeckOptions {
-  apiKey: string;
+  /** Bearer key for the authed `pull` path. Omit for public marketplace downloads. */
+  apiKey?: string;
   apiUrl?: string;
   profileName?: string;
-  presentationId: string;
+  presentationId?: string;
   version?: number;
   files: ManifestFileInput[];
   destination: string;
   concurrency?: number;
   onProgress?: (p: DownloadProgress) => void;
+  /**
+   * Override how each asset URL is built. When set, `presentationId`/`version`
+   * are unused — this is how `remix` points the downloader at the public
+   * `downloadMarketplaceAsset` endpoint instead of `downloadPresentationAsset`.
+   */
+  assetUrlBuilder?: (file: ManifestFileInput) => string;
 }
 
 export interface DownloadProgress {
   completed: number;
   total: number;
+  /** Monotonic 1-based index of the file being started (for `[index/total]` display). */
+  index?: number;
   currentFile?: { path: string; size: number };
 }
 
@@ -58,21 +67,20 @@ async function downloadOne(
   opts: DownloadDeckOptions,
   file: ManifestFileInput,
 ): Promise<{ bytes: number }> {
-  const url = buildDownloadAssetUrl({
-    apiUrl: opts.apiUrl,
-    profileName: opts.profileName,
-    presentationId: opts.presentationId,
-    sha256: file.sha256,
-    version: opts.version,
-  });
+  const url = opts.assetUrlBuilder
+    ? opts.assetUrlBuilder(file)
+    : buildDownloadAssetUrl({
+        apiUrl: opts.apiUrl,
+        profileName: opts.profileName,
+        presentationId: opts.presentationId ?? '',
+        sha256: file.sha256,
+        version: opts.version,
+      });
 
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${opts.apiKey}`,
-      Accept: '*/*',
-    },
-  });
+  const headers: Record<string, string> = { Accept: '*/*' };
+  if (opts.apiKey) headers.Authorization = `Bearer ${opts.apiKey}`;
+
+  const response = await fetch(url, { method: 'GET', headers });
   if (!response.ok) {
     const text = await response.text().catch(() => '');
     throw new Error(`HTTP ${response.status} for ${file.path}: ${text.slice(0, 200)}`);
@@ -113,6 +121,7 @@ export async function downloadDeck(opts: DownloadDeckOptions): Promise<DownloadD
   const pending = [...opts.files];
   const total = pending.length;
   let completed = 0;
+  let started = 0;
   let bytes = 0;
   const failed: Array<{ path: string; reason: string }> = [];
 
@@ -120,7 +129,8 @@ export async function downloadDeck(opts: DownloadDeckOptions): Promise<DownloadD
     while (pending.length > 0) {
       const next = pending.shift();
       if (!next) break;
-      opts.onProgress?.({ completed, total, currentFile: { path: next.path, size: next.size } });
+      started += 1;
+      opts.onProgress?.({ completed, total, index: started, currentFile: { path: next.path, size: next.size } });
       try {
         const r = await downloadOne(opts, next);
         bytes += r.bytes;
