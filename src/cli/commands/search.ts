@@ -31,6 +31,7 @@ interface SearchOptions {
   kind?: string;
   tag?: string;
   category?: string;
+  stack?: string;
   sort?: string;
   limit?: string;
   apiUrl?: string;
@@ -44,6 +45,7 @@ export const searchCommand = new Command('search')
   .option('--kind <kind>', 'Filter by kind: "presentation", "app", or "plan"')
   .option('--tag <tag>', 'Filter by a single tag')
   .option('--category <category>', 'Filter by category')
+  .option('--stack <tech>', 'Filter by one technology (lowercase slug, e.g. nextjs)')
   .option('--sort <sort>', 'Sort: "recent" (default), "popular", "stars"')
   .option('--limit <N>', 'Max results (1–50, default 24)')
   .option('--api-url <url>', 'Override base URL')
@@ -82,6 +84,7 @@ export const searchCommand = new Command('search')
       kind: options.kind as 'presentation' | 'app' | 'plan' | undefined,
       tag: options.tag,
       category: options.category,
+      stack: options.stack,
       sort,
       limit,
     });
@@ -130,6 +133,7 @@ export const searchCommand = new Command('search')
       console.log(`  ${green(l.slug)}  ${kindBadge}${interactiveBadge}  ${l.starCount} stars  ${l.remixCount} remixes`);
       console.log(`    ${bold(l.title)} — ${l.description}`);
       if (l.tags.length > 0) console.log(`    tags: ${l.tags.join(', ')}`);
+      if (l.techStack.length > 0) console.log(`    stack: ${l.techStack.join(', ')}`);
       console.log(`    remix:  slideless remix ${l.slug}`);
       console.log('');
     }

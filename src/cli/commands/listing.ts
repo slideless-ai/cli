@@ -39,6 +39,7 @@ interface UpdateOptions extends GetOptions {
   readme?: string;
   tags?: string;
   category?: string;
+  stack?: string;
   status?: string;
   interactive?: boolean;
   republishVersion?: string;
@@ -93,6 +94,7 @@ const getSubcommand = new Command('get')
     }
     if (l.category) console.log(`  Category:    ${l.category}`);
     if (l.tags.length > 0) console.log(`  Tags:        ${l.tags.join(', ')}`);
+    if (l.techStack.length > 0) console.log(`  Tech stack:  ${l.techStack.join(', ')}`);
     console.log(`  Published:   ${formatDate(l.createdAt)}`);
     console.log(`  Preview:     ${cyan(l.previewUrl)}`);
     if (remixes.length > 0) {
@@ -115,6 +117,7 @@ const updateSubcommand = new Command('update')
   .option('--readme <text>', 'New readme (empty string clears it)')
   .option('--tags <tags>', 'Comma-separated tags (replaces existing)')
   .option('--category <category>', 'New category')
+  .option('--stack <stack>', 'Tech stack as lowercase slugs, comma-separated (e.g. nextjs,firebase). Replaces the existing set.')
   .option('--status <status>', 'Visibility: "public" or "unlisted"')
   .option('--interactive', 'Mark the listing as interactive (ignored for apps; omit to leave unchanged)')
   .option('--no-interactive', 'Mark the listing as non-interactive')
@@ -159,6 +162,7 @@ const updateSubcommand = new Command('update')
       readme: options.readme,
       tags: options.tags ? options.tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
       category: options.category,
+      techStack: options.stack ? options.stack.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
       status: options.status as 'public' | 'unlisted' | undefined,
       interactive: options.interactive,
       republishVersion,

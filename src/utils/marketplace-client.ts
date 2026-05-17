@@ -36,6 +36,7 @@ export interface ListListingsParams {
   kind?: MarketplaceKind;
   category?: string;
   tag?: string;
+  stack?: string;
   sort?: 'recent' | 'popular' | 'stars';
   limit?: number;
   cursor?: string;
@@ -49,6 +50,7 @@ export async function listMarketplaceListings(
   if (opts.kind) qs.set('kind', opts.kind);
   if (opts.category) qs.set('category', opts.category);
   if (opts.tag) qs.set('tag', opts.tag);
+  if (opts.stack) qs.set('stack', opts.stack);
   if (opts.sort) qs.set('sort', opts.sort);
   if (typeof opts.limit === 'number') qs.set('limit', String(opts.limit));
   if (opts.cursor) qs.set('cursor', opts.cursor);
@@ -108,6 +110,7 @@ export interface PublishListingParams {
   readme?: string;
   tags?: string[];
   category?: string;
+  techStack?: string[];
   version?: number;
   thumbnailPath?: string;
 }
@@ -127,6 +130,7 @@ export async function publishMarketplaceListing(
   if (opts.readme !== undefined) body.readme = opts.readme;
   if (opts.tags !== undefined) body.tags = opts.tags;
   if (opts.category !== undefined) body.category = opts.category;
+  if (opts.techStack !== undefined) body.techStack = opts.techStack;
   if (opts.version !== undefined) body.version = opts.version;
   if (opts.thumbnailPath !== undefined) body.thumbnailPath = opts.thumbnailPath;
   return apiCall<PublishListingOutput>({ url, method: 'POST', apiKey: opts.apiKey, body });
@@ -139,6 +143,7 @@ export interface UpdateListingParams {
   readme?: string | null;
   tags?: string[];
   category?: string | null;
+  techStack?: string[];
   status?: MarketplaceStatus;
   interactive?: boolean;
   thumbnailPath?: string | null;
@@ -150,7 +155,7 @@ export async function updateMarketplaceListing(
 ): Promise<ApiResult<GetListingOutput>> {
   const url = resolveEndpointUrl('updateMarketplaceListing', opts.apiUrl, opts.profileName);
   const body: Record<string, unknown> = { slug: opts.slug };
-  for (const k of ['title', 'description', 'readme', 'tags', 'category', 'status', 'interactive', 'thumbnailPath', 'republishVersion'] as const) {
+  for (const k of ['title', 'description', 'readme', 'tags', 'category', 'techStack', 'status', 'interactive', 'thumbnailPath', 'republishVersion'] as const) {
     if (opts[k] !== undefined) body[k] = opts[k];
   }
   return apiCall<GetListingOutput>({ url, method: 'POST', apiKey: opts.apiKey, body });

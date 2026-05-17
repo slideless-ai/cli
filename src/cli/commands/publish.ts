@@ -37,6 +37,7 @@ interface PublishOptions {
   readme?: string;
   tags?: string;
   category?: string;
+  stack?: string;
   version?: string;
   thumbnail?: string;
   apiKey?: string;
@@ -55,6 +56,7 @@ export const publishCommand = new Command('publish')
   .option('--readme <text>', 'Optional longer markdown description')
   .option('--tags <tags>', 'Comma-separated tags (e.g. pitch,startup)')
   .option('--category <category>', 'A single category (business, marketing, education, …)')
+  .option('--stack <stack>', 'Tech stack as lowercase slugs, comma-separated (e.g. nextjs,firebase,n8n). One slug per technology; no display names, no versions.')
   .option('--version <N>', 'Pin to a specific version (default: current)')
   .option('--thumbnail <path>', 'Manifest-relative path of a thumbnail asset')
   .option('--api-key <key>', 'Override API key')
@@ -107,6 +109,10 @@ export const publishCommand = new Command('publish')
       ? options.tags.split(',').map((t) => t.trim()).filter(Boolean)
       : undefined;
 
+    const techStack = options.stack
+      ? options.stack.split(',').map((s) => s.trim()).filter(Boolean)
+      : undefined;
+
     const result = await publishMarketplaceListing({
       apiKey: apiKey!,
       apiUrl: options.apiUrl,
@@ -120,6 +126,7 @@ export const publishCommand = new Command('publish')
       readme: options.readme,
       tags,
       category: options.category,
+      techStack,
       version,
       thumbnailPath: options.thumbnail,
     });

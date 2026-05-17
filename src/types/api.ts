@@ -211,6 +211,7 @@ export interface MarketplacePublicListing {
   description: string;
   tags: string[];
   category: string | null;
+  techStack: string[];
   authorDisplayName: string;
   authorHandle: string;
   thumbnailUrl: string | null;
