@@ -20,6 +20,7 @@ import { logoutCommand } from './commands/logout.js';
 import { verifyCommand } from './commands/verify.js';
 import { pushCommand } from './commands/push.js';
 import { pullCommand } from './commands/pull.js';
+import { devCommand } from './commands/dev.js';
 import { shareCommand } from './commands/share.js';
 import { unshareCommand } from './commands/unshare.js';
 import { deleteCommand } from './commands/delete.js';
@@ -69,6 +70,9 @@ program.addCommand(verifyCommand);
 // Content lifecycle
 program.addCommand(pushCommand);
 program.addCommand(pullCommand);
+
+// Local development (offline: no auth, no upload)
+program.addCommand(devCommand);
 
 // Sharing (viewer access)
 program.addCommand(shareCommand);

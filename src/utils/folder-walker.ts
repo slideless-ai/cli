@@ -65,6 +65,20 @@ function loadIgnore(rootAbs: string): Ignore {
 }
 
 /**
+ * Build the same ignore matcher `walkDeck` uses (built-in ignores +
+ * `.slidelessignore`). Exposed so `slideless dev`'s file watcher and static
+ * server stay byte-for-byte consistent with what `push` would upload.
+ */
+export function createDeckIgnore(rootPath: string): Ignore {
+  return loadIgnore(resolve(rootPath));
+}
+
+/** Normalize a platform-specific path to forward-slash form. */
+export function toPosixPath(p: string): string {
+  return toPosix(p);
+}
+
+/**
  * Walk a deck folder. Returns the set of files that will be uploaded
  * (i.e. the not-ignored set). Does NOT hash — call hashFiles() separately
  * if you need hashes.

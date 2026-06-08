@@ -19,6 +19,13 @@ export interface LocalManifest {
   lastPulledVersion: number;
   lastPulledAt: string;
   role: 'owner' | 'dev';
+  /**
+   * Entry HTML file of the deck (e.g. `index.html`, `article.html`). Recorded
+   * by `pull` so `slideless dev` opens the same first page as the hosted
+   * viewer. Optional for backward compatibility with decks pulled before this
+   * field existed.
+   */
+  entryPath?: string;
 }
 
 export function localManifestPath(deckRoot: string): string {
@@ -49,12 +56,16 @@ function validateManifest(raw: unknown): LocalManifest {
   if (r.baseUrl !== undefined && typeof r.baseUrl !== 'string') {
     throw new Error('slideless.json: baseUrl must be a string when present');
   }
+  if (r.entryPath !== undefined && typeof r.entryPath !== 'string') {
+    throw new Error('slideless.json: entryPath must be a string when present');
+  }
   return {
     presentationId: r.presentationId,
     baseUrl: (r.baseUrl as string | undefined) ?? undefined,
     lastPulledVersion: r.lastPulledVersion,
     lastPulledAt: r.lastPulledAt,
     role: r.role,
+    entryPath: (r.entryPath as string | undefined) ?? undefined,
   };
 }
 
@@ -81,6 +92,7 @@ export function writeLocalManifest(deckRoot: string, manifest: LocalManifest): v
     lastPulledAt: manifest.lastPulledAt,
     role: manifest.role,
     ...(manifest.baseUrl ? { baseUrl: manifest.baseUrl } : {}),
+    ...(manifest.entryPath ? { entryPath: manifest.entryPath } : {}),
   };
   writeFileSync(path, JSON.stringify(normalized, null, 2) + '\n', { mode: 0o644 });
 }

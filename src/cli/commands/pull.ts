@@ -208,6 +208,7 @@ export const pullCommand = new Command('pull')
         lastPulledVersion: manifest.version,
         lastPulledAt: new Date().toISOString(),
         role: info.role,
+        entryPath: manifest.entryPath,
       });
     } catch (err) {
       if (!jsonMode) {

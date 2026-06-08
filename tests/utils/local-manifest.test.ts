@@ -59,6 +59,43 @@ describe('local-manifest', () => {
     expect(r.role).toBe('dev');
   });
 
+  it('preserves optional entryPath', () => {
+    writeLocalManifest(dir, {
+      presentationId: 'abc',
+      lastPulledVersion: 3,
+      lastPulledAt: '2026-01-01T00:00:00Z',
+      role: 'dev',
+      entryPath: 'article.html',
+    });
+    const r = readLocalManifest(dir);
+    expect(r.entryPath).toBe('article.html');
+  });
+
+  it('omits entryPath when absent', () => {
+    writeLocalManifest(dir, {
+      presentationId: 'abc',
+      lastPulledVersion: 1,
+      lastPulledAt: '2026-01-01T00:00:00Z',
+      role: 'owner',
+    });
+    const r = readLocalManifest(dir);
+    expect(r.entryPath).toBeUndefined();
+  });
+
+  it('rejects non-string entryPath', () => {
+    writeFileSync(
+      join(dir, LOCAL_MANIFEST_FILENAME),
+      JSON.stringify({
+        presentationId: 'x',
+        lastPulledVersion: 1,
+        lastPulledAt: '2026-01-01T00:00:00Z',
+        role: 'dev',
+        entryPath: 123,
+      }),
+    );
+    expect(() => readLocalManifest(dir)).toThrow(/entryPath/);
+  });
+
   it('rejects invalid JSON', () => {
     writeFileSync(join(dir, LOCAL_MANIFEST_FILENAME), '{not json');
     expect(() => readLocalManifest(dir)).toThrow(/not valid JSON/);
