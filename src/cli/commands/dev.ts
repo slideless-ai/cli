@@ -37,6 +37,17 @@ import {
   hasLocalManifest,
   readLocalManifest,
 } from '../../utils/local-manifest.js';
+import {
+  ANNOTATE_CLIENT_PATH,
+  ANNOTATIONS_API_PATH,
+  ANNOTATION_CLIENT_JS,
+} from '../dev/annotation-client.js';
+import {
+  readAnnotations,
+  addAnnotation,
+  updateAnnotation,
+  removeAnnotation,
+} from '../../utils/annotations-store.js';
 import { exitWithError, green, cyan, yellow, CHECK } from '../utils/output.js';
 
 interface DevOptions {
@@ -45,6 +56,7 @@ interface DevOptions {
   entry?: string;
   open?: boolean; // commander sets `open: false` for --no-open
   reload?: boolean; // commander sets `reload: false` for --no-reload
+  annotate?: boolean; // commander sets `annotate: false` for --no-annotate
 }
 
 export const RELOAD_PATH = '/__slideless_reload';
@@ -129,11 +141,133 @@ export function injectReload(html: string): string {
   return html.slice(0, idx) + RELOAD_SNIPPET + html.slice(idx);
 }
 
+/** The tag that pulls in the annotation overlay client. */
+export const ANNOTATE_SNIPPET = `<script src="${ANNOTATE_CLIENT_PATH}" defer></script>`;
+
+/**
+ * Insert the annotation overlay client before </body>, or append if absent.
+ * When `entry` is given, a tiny config script tells the client which file is
+ * the deck entry — needed so it can tell whether a note belongs to the page
+ * currently shown or to another page in a multi-page deck.
+ */
+export function injectAnnotator(html: string, entry?: string): string {
+  const config = entry
+    ? `<script>window.__slidelessAnnotate={entry:${JSON.stringify(entry)}};</script>`
+    : '';
+  const snippet = config + ANNOTATE_SNIPPET;
+  const idx = html.toLowerCase().lastIndexOf('</body>');
+  if (idx === -1) return html + snippet;
+  return html.slice(0, idx) + snippet + html.slice(idx);
+}
+
+/** Map a served URL path to the deck-relative entry file it represents. */
+export function pathToEntryFile(rawPath: string, entry: string): string {
+  let p: string;
+  try {
+    p = decodeURIComponent(rawPath.split('?')[0].split('#')[0]);
+  } catch {
+    p = rawPath;
+  }
+  p = p.replace(/^\/+/, '');
+  // Mirror the static handler: a directory request serves its entry file.
+  if (p === '' || p.endsWith('/')) return p + entry;
+  return p;
+}
+
+/** Read a request body and parse it as JSON, tolerating empty/garbage. */
+function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+  return new Promise((resolvePromise) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+      if (data.length > 1_000_000) req.destroy(); // 1MB guard
+    });
+    req.on('end', () => {
+      if (!data) return resolvePromise({});
+      try {
+        const parsed = JSON.parse(data);
+        resolvePromise(
+          parsed && typeof parsed === 'object'
+            ? (parsed as Record<string, unknown>)
+            : {},
+        );
+      } catch {
+        resolvePromise({});
+      }
+    });
+    req.on('error', () => resolvePromise({}));
+  });
+}
+
+/** Handle the `/__slideless_annotations` REST surface (GET/POST/PATCH/DELETE). */
+async function handleAnnotationsApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  method: string,
+  deckRoot: string,
+  entry: string,
+): Promise<void> {
+  const url = new URL(req.url ?? '/', 'http://localhost');
+  const id = url.searchParams.get('id') ?? '';
+  const json = (status: number, obj: unknown) => {
+    const buf = Buffer.from(JSON.stringify(obj), 'utf-8');
+    res.writeHead(status, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Length': buf.length,
+      'Cache-Control': 'no-store',
+    });
+    res.end(method === 'HEAD' ? undefined : buf);
+  };
+
+  try {
+    if (method === 'GET' || method === 'HEAD') {
+      return json(200, readAnnotations(deckRoot));
+    }
+    if (method === 'POST') {
+      const body = await readJsonBody(req);
+      const entryFile = pathToEntryFile(
+        typeof body.path === 'string' ? body.path : '',
+        entry,
+      );
+      const created = addAnnotation(deckRoot, {
+        note: typeof body.note === 'string' ? body.note : '',
+        entryFile,
+        selectedText:
+          typeof body.selectedText === 'string' ? body.selectedText : '',
+        context: body.context as { before?: string; after?: string } | undefined,
+        anchor: body.anchor as Record<string, unknown> | undefined,
+      });
+      return json(201, created);
+    }
+    if (method === 'PATCH') {
+      const body = await readJsonBody(req);
+      if (!id) return json(400, { error: 'id query param required' });
+      const updated = updateAnnotation(deckRoot, id, {
+        note: typeof body.note === 'string' ? body.note : undefined,
+        processed:
+          typeof body.processed === 'boolean' ? body.processed : undefined,
+      });
+      return updated ? json(200, updated) : json(404, { error: 'not found' });
+    }
+    if (method === 'DELETE') {
+      if (!id) return json(400, { error: 'id query param required' });
+      const ok = removeAnnotation(deckRoot, id);
+      return json(ok ? 200 : 404, { ok });
+    }
+    res.writeHead(405, { Allow: 'GET, POST, PATCH, DELETE' });
+    res.end();
+  } catch (err) {
+    json(500, { error: err instanceof Error ? err.message : String(err) });
+  }
+}
+
 interface HandlerDeps {
   deckRoot: string;
   entry: string;
   getServed: () => Map<string, WalkedFile>;
   reloadEnabled: boolean;
+  /** When true, serve the overlay client + annotation API and inject the tag. */
+  annotateEnabled: boolean;
   sseClients: Set<ServerResponse>;
   /** Called when a browser opens/closes the live-reload channel. */
   onClientsChanged?: (count: number) => void;
@@ -141,19 +275,38 @@ interface HandlerDeps {
 
 /** Build the HTTP request handler: static serving + SSE reload channel. */
 export function createRequestHandler(deps: HandlerDeps) {
-  const { deckRoot, entry, getServed, reloadEnabled, sseClients } = deps;
+  const { deckRoot, entry, getServed, reloadEnabled, annotateEnabled, sseClients } =
+    deps;
   const notifyClients = () => deps.onClientsChanged?.(sseClients.size);
 
   return (req: IncomingMessage, res: ServerResponse): void => {
     const method = req.method ?? 'GET';
+
+    // Strip query/hash before resolving to a path.
+    const rawPath = (req.url ?? '/').split('?')[0].split('#')[0];
+
+    // --- Annotation overlay (handled for any HTTP method, before the
+    // GET/HEAD-only guard below). ---
+    if (annotateEnabled && rawPath === ANNOTATE_CLIENT_PATH) {
+      const buf = Buffer.from(ANNOTATION_CLIENT_JS, 'utf-8');
+      res.writeHead(200, {
+        'Content-Type': 'text/javascript; charset=utf-8',
+        'Content-Length': buf.length,
+        'Cache-Control': 'no-store',
+      });
+      res.end(method === 'HEAD' ? undefined : buf);
+      return;
+    }
+    if (annotateEnabled && rawPath === ANNOTATIONS_API_PATH) {
+      void handleAnnotationsApi(req, res, method, deckRoot, entry);
+      return;
+    }
+
     if (method !== 'GET' && method !== 'HEAD') {
       res.writeHead(405, { Allow: 'GET, HEAD' });
       res.end();
       return;
     }
-
-    // Strip query/hash before resolving to a path.
-    const rawPath = (req.url ?? '/').split('?')[0].split('#')[0];
 
     if (reloadEnabled && rawPath === RELOAD_PATH) {
       res.writeHead(200, {
@@ -200,10 +353,14 @@ export function createRequestHandler(deps: HandlerDeps) {
 
     let body: Buffer | string;
     try {
-      body =
-        isHtml && reloadEnabled
-          ? injectReload(readFileSync(abs, 'utf-8'))
-          : readFileSync(abs);
+      if (isHtml && (reloadEnabled || annotateEnabled)) {
+        let html = readFileSync(abs, 'utf-8');
+        if (reloadEnabled) html = injectReload(html);
+        if (annotateEnabled) html = injectAnnotator(html, entry);
+        body = html;
+      } else {
+        body = readFileSync(abs);
+      }
     } catch {
       res.writeHead(404).end('Not found');
       return;
@@ -274,6 +431,7 @@ export const devCommand = new Command('dev')
   .option('--entry <file>', 'Entry HTML file (overrides auto-detection)')
   .option('--no-open', "Don't open the browser on start")
   .option('--no-reload', 'Serve static files only (disable live-reload)')
+  .option('--no-annotate', 'Disable the in-browser annotation overlay')
   .action((pathArg: string | undefined, options: DevOptions) => {
     const deckRoot = resolve(pathArg ?? '.');
     if (!existsSync(deckRoot) || !statSync(deckRoot).isDirectory()) {
@@ -286,6 +444,7 @@ export const devCommand = new Command('dev')
       exitWithError('--port must be an integer between 1 and 65535', 1);
     }
     const reloadEnabled = options.reload !== false;
+    const annotateEnabled = options.annotate !== false;
 
     let served = buildServedMap(deckRoot);
     let entry: string;
@@ -304,6 +463,7 @@ export const devCommand = new Command('dev')
         entry,
         getServed: () => served,
         reloadEnabled,
+        annotateEnabled,
         sseClients,
         onClientsChanged: (count) => {
           if (count > lastClientCount) {
@@ -372,6 +532,9 @@ export const devCommand = new Command('dev')
         console.log(`  Entry:   ${entry}`);
         console.log(
           `  Reload:  ${reloadEnabled ? 'on (auto-reload on save)' : 'off'}`,
+        );
+        console.log(
+          `  Annotate: ${annotateEnabled ? 'on (select text to leave a note)' : 'off'}`,
         );
         console.log('');
         console.log('  Press Ctrl+C to stop.');

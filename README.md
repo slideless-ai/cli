@@ -118,6 +118,7 @@ or on failure:
 | `slideless verify` | Validate the active key against the backend. |
 | `slideless push [path]` | Upload a deck (folder or `.html`). New presentations need `--title`; updates read `slideless.json`. `--entry <file>` sets the entry HTML in folder mode (default `index.html`). `--force` bypasses the version-conflict check. `--strict` fails on unresolved refs. |
 | `slideless pull <shareId> [path]` | Download a presentation into a local folder. `--at <N>` pulls a specific version; `--force` overwrites a non-empty destination. |
+| `slideless dev [path]` | Serve a deck locally with live-reload + an in-browser annotation overlay. Fully offline, no upload. `--port`, `--host`, `--entry`, `--no-open`, `--no-reload`, `--no-annotate`. |
 | `slideless share <shareId>` | Mint a public viewer token. `--name "..."` labels it; `--to-version <N>` pins it to a version. |
 | `slideless unshare <shareId>` | Revoke a single token (`--token <tokenId>`), or archive the whole presentation. |
 | `slideless share-email <shareId> --to <email>` | Email a deck to recipients with per-recipient tracked tokens. |
@@ -135,6 +136,18 @@ or on failure:
 | `slideless star\|unstar <slug>` · `slideless stars` | Star, unstar, or list starred listings. |
 | `slideless config show\|set\|clear` | Manage the config file. |
 | `slideless completion bash\|zsh\|fish` | Generate shell completion scripts. |
+
+### Local development with `slideless dev`
+
+`slideless dev` serves a deck folder over HTTP, watches every file, and auto-reloads the browser on save — a live edit loop with no API key and no upload.
+
+```bash
+slideless dev                 # serve the current folder
+slideless dev ./my-deck       # serve a folder
+slideless dev . --port 8080   # pick a port (auto-bumps if taken)
+```
+
+**Annotating while you develop.** Select any text in the rendered deck and an **+ Add note** button appears — type a remark and save it. Notes are written to `.slideless/annotations.json` at the deck root (created on first save, never uploaded by `push`, and excluded from live-reload). A 📝 badge opens a side panel to edit, remove, jump to, and filter notes (**New** / **Previous** via a `processed` flag). It's a **gathering** surface only — applying the changes happens elsewhere. Jump-to is best-effort: delete a slide and its note just stays in the panel as "location not found". Disable with `--no-annotate`.
 
 ### Error codes for agents
 

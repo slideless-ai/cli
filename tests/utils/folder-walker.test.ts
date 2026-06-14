@@ -44,6 +44,15 @@ describe('walkDeck', () => {
     expect(result.files.map((f) => f.path)).toEqual(['index.html']);
   });
 
+  it('ignores the .slideless/ dev folder (annotations)', () => {
+    writeFileSync(join(root, 'index.html'), '<html></html>');
+    mkdirSync(join(root, '.slideless'));
+    writeFileSync(join(root, '.slideless', 'annotations.json'), '{}');
+
+    const result = walkDeck(root);
+    expect(result.files.map((f) => f.path)).toEqual(['index.html']);
+  });
+
   it('respects a .slidelessignore file at the root', () => {
     writeFileSync(join(root, 'index.html'), '<html></html>');
     writeFileSync(join(root, 'secret.txt'), 'hush');
