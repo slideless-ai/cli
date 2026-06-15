@@ -120,7 +120,7 @@ or on failure:
 | `slideless pull <shareId> [path]` | Download a presentation into a local folder. `--at <N>` pulls a specific version; `--force` overwrites a non-empty destination. |
 | `slideless pull-annotations [shareId]` | Pull hosted annotations (gathered by viewers server-side, owner-only) into the local `.slideless/annotations.json`. Defaults `shareId` to the deck's `slideless.json`. `--at <N>` filters to one version (defaults to the deck's pulled version); `--path <dir>` picks the deck. Dedupes by hosted id and never clobbers local notes. |
 | `slideless dev [path]` | Serve a deck locally with live-reload + an in-browser annotation overlay. Fully offline, no upload. `--port`, `--host`, `--entry`, `--no-open`, `--no-reload`, `--no-annotate`. |
-| `slideless share <shareId>` | Mint a public viewer token. `--name "..."` labels it; `--to-version <N>` pins it to a version. |
+| `slideless share <shareId>` | Mint a public viewer token. `--name "..."` labels it; `--to-version <N>` pins it to a version; `--name "X" --annotator` mints an annotator link (holder can leave notes; pull them with `pull-annotations`). |
 | `slideless unshare <shareId>` | Revoke a single token (`--token <tokenId>`), or archive the whole presentation. |
 | `slideless share-email <shareId> --to <email>` | Email a deck to recipients with per-recipient tracked tokens. |
 | `slideless invite <shareId>` | Invite a collaborator (editor access). |
