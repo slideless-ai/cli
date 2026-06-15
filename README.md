@@ -118,6 +118,7 @@ or on failure:
 | `slideless verify` | Validate the active key against the backend. |
 | `slideless push [path]` | Upload a deck (folder or `.html`). New presentations need `--title`; updates read `slideless.json`. `--entry <file>` sets the entry HTML in folder mode (default `index.html`). `--force` bypasses the version-conflict check. `--strict` fails on unresolved refs. |
 | `slideless pull <shareId> [path]` | Download a presentation into a local folder. `--at <N>` pulls a specific version; `--force` overwrites a non-empty destination. |
+| `slideless pull-annotations [shareId]` | Pull hosted annotations (gathered by viewers server-side, owner-only) into the local `.slideless/annotations.json`. Defaults `shareId` to the deck's `slideless.json`. `--at <N>` filters to one version (defaults to the deck's pulled version); `--path <dir>` picks the deck. Dedupes by hosted id and never clobbers local notes. |
 | `slideless dev [path]` | Serve a deck locally with live-reload + an in-browser annotation overlay. Fully offline, no upload. `--port`, `--host`, `--entry`, `--no-open`, `--no-reload`, `--no-annotate`. |
 | `slideless share <shareId>` | Mint a public viewer token. `--name "..."` labels it; `--to-version <N>` pins it to a version. |
 | `slideless unshare <shareId>` | Revoke a single token (`--token <tokenId>`), or archive the whole presentation. |
@@ -148,6 +149,14 @@ slideless dev . --port 8080   # pick a port (auto-bumps if taken)
 ```
 
 **Annotating while you develop.** Select any text in the rendered deck and an **+ Add note** button appears — type a remark and save it. Notes are written to `.slideless/annotations.json` at the deck root (created on first save, never uploaded by `push`, and excluded from live-reload). A 📝 badge opens a side panel to edit, remove, jump to, and filter notes (**New** / **Previous** via a `processed` flag). It's a **gathering** surface only — applying the changes happens elsewhere. Jump-to is best-effort: delete a slide and its note just stays in the panel as "location not found". Disable with `--no-annotate`.
+
+**Pulling hosted annotations.** Annotations made by viewers on the hosted deck are stored server-side. `slideless pull-annotations` merges them into the *same* `.slideless/annotations.json` file, so the local apply flow consumes local and hosted notes uniformly. Each annotation carries a unified shape: a `source` (`local` from `slideless dev`, or `hosted` when pulled), a `deckVersion` (the version the note was made against, or `null` if never pushed), and an `author` (the API key name locally, the share-token / viewer name when hosted). Pulls are idempotent — they dedupe by the hosted annotation id and never clobber existing local notes.
+
+```bash
+slideless pull-annotations              # shareId + version from slideless.json
+slideless pull-annotations 01HXYZ       # explicit presentation, all versions
+slideless pull-annotations --at 4       # only notes made against version 4
+```
 
 ### Error codes for agents
 

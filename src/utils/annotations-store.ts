@@ -184,6 +184,80 @@ export function addAnnotation(
   return annotation;
 }
 
+/**
+ * A fully-formed annotation carrying its own id + createdAt (used when pulling
+ * hosted annotations, which already have server-assigned ids we must preserve
+ * so re-pulls dedupe). All fields are normalized; missing ones are defaulted.
+ */
+export interface PreformedAnnotation {
+  id: string;
+  createdAt?: string;
+  processed?: boolean;
+  note: string;
+  entryFile: string;
+  selectedText: string;
+  context?: { before?: string; after?: string };
+  anchor?: Partial<AnnotationAnchor>;
+  deckVersion?: number | null;
+  source?: AnnotationSource;
+  author?: string | null;
+}
+
+function normalizePreformed(
+  a: PreformedAnnotation,
+  now: string,
+): Annotation | null {
+  if (!a || typeof a.id !== 'string' || a.id.length === 0) return null;
+  return {
+    id: a.id,
+    createdAt: typeof a.createdAt === 'string' ? a.createdAt : now,
+    processed: a.processed === true,
+    note: typeof a.note === 'string' ? a.note : '',
+    entryFile: typeof a.entryFile === 'string' ? a.entryFile : '',
+    selectedText: typeof a.selectedText === 'string' ? a.selectedText : '',
+    context: {
+      before: typeof a.context?.before === 'string' ? a.context.before : '',
+      after: typeof a.context?.after === 'string' ? a.context.after : '',
+    },
+    anchor: normalizeAnchor(a.anchor),
+    deckVersion: typeof a.deckVersion === 'number' ? a.deckVersion : null,
+    source: a.source === 'hosted' ? 'hosted' : 'local',
+    author: typeof a.author === 'string' ? a.author : null,
+  };
+}
+
+/**
+ * Merge pre-formed annotations into the local file, preserving each one's id +
+ * createdAt. Entries whose id already exists locally are skipped (never
+ * clobbering existing local notes); the rest are appended. Tolerant like the
+ * rest of the store — malformed inputs are dropped rather than thrown.
+ *
+ * Returns the count of newly-added entries and the count skipped as duplicates.
+ */
+export function mergeHostedAnnotations(
+  deckRoot: string,
+  incoming: PreformedAnnotation[],
+  now: string = new Date().toISOString(),
+): { added: number; skipped: number } {
+  const file = readAnnotations(deckRoot);
+  const existingIds = new Set(file.annotations.map((a) => a.id));
+  let added = 0;
+  let skipped = 0;
+  for (const raw of Array.isArray(incoming) ? incoming : []) {
+    const normalized = normalizePreformed(raw, now);
+    if (!normalized) continue;
+    if (existingIds.has(normalized.id)) {
+      skipped++;
+      continue;
+    }
+    file.annotations.push(normalized);
+    existingIds.add(normalized.id);
+    added++;
+  }
+  if (added > 0) writeAnnotations(deckRoot, file);
+  return { added, skipped };
+}
+
 /** Edit the note text and/or toggle `processed`. Returns the updated entry. */
 export function updateAnnotation(
   deckRoot: string,

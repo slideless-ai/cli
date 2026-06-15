@@ -26,6 +26,7 @@ import type {
   ListCollaboratorsOutput,
   TokenVersionMode,
   UploadPresentationAssetOutput,
+  ListAnnotationsForOwnerOutput,
 } from '../types/api.js';
 
 export interface SharedClientOptions {
@@ -247,6 +248,18 @@ export async function getPresentationVersion(
   const baseUrl = resolveBaseUrl(opts.apiUrl, opts.profileName);
   const url = `${baseUrl}/getPresentationVersion/${encodeURIComponent(opts.presentationId)}/${opts.version}`;
   return apiCall<GetPresentationVersionOutput>({ url, method: 'GET', apiKey: opts.apiKey });
+}
+
+// ─── Annotations (owner pull) ─────────────────────────────
+
+export async function listAnnotations(
+  opts: SharedClientOptions & { presentationId: string; version?: number },
+): Promise<ApiResult<ListAnnotationsForOwnerOutput>> {
+  const endpoint = resolveEndpointUrl('listAnnotationsForOwner', opts.apiUrl, opts.profileName);
+  const qs = new URLSearchParams({ presentationId: opts.presentationId });
+  if (typeof opts.version === 'number') qs.set('version', String(opts.version));
+  const url = `${endpoint}?${qs.toString()}`;
+  return apiCall<ListAnnotationsForOwnerOutput>({ url, method: 'GET', apiKey: opts.apiKey });
 }
 
 // ─── Collaborators ────────────────────────────────────────

@@ -63,6 +63,7 @@ export const ENDPOINTS = {
   inviteCollaborator: '/inviteCollaborator',
   uninviteCollaborator: '/uninviteCollaborator',
   listCollaborators: '/listCollaborators',
+  listAnnotationsForOwner: '/listAnnotationsForOwner',
   cliRequestSignupOtp: '/cliRequestSignupOtp',
   cliCompleteSignup: '/cliCompleteSignup',
   cliRequestLoginOtp: '/cliRequestLoginOtp',

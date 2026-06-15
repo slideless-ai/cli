@@ -196,6 +196,35 @@ export interface GetPresentationVersionOutput {
   createdByRole: 'owner' | 'dev';
 }
 
+// ─── Annotations (owner pull) ─────────────────────────────
+// Mirrors functions/src/features/shared-presentations/types for annotations.
+
+export interface PresentationAnnotationInfo {
+  id: string;
+  presentationId: string;
+  deckVersion: number;
+  author: string;
+  note: string;
+  selectedText: string;
+  context: { before: string; after: string };
+  anchor: {
+    container: {
+      kind: 'slide' | 'panel' | null;
+      index: number | null;
+      heading: string | null;
+    };
+    selector: string | null;
+  };
+  entryFile: string;
+  processed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListAnnotationsForOwnerOutput {
+  annotations: PresentationAnnotationInfo[];
+}
+
 // ─── Marketplace ──────────────────────────────────────────
 // Mirrors functions/src/features/marketplace/types/marketplaceTypes.ts
 
