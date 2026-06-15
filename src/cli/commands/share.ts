@@ -5,9 +5,10 @@
  * `push`; revoking is `unshare`.
  *
  * Usage:
- *   slideless share <id>                             # mints a "default" token
- *   slideless share <id> --name "Acme"               # named token
+ *   slideless share <id>                             # mints a "default" view token
+ *   slideless share <id> --name "Acme"               # named view token
  *   slideless share <id> --to-version 3              # pin to version 3
+ *   slideless share <id> --name "Marie" --annotator  # annotator link (can leave notes)
  */
 
 import { Command } from 'commander';
@@ -33,6 +34,7 @@ import {
 interface ShareOptions {
   name?: string;
   toVersion?: string;
+  annotator?: boolean;
   apiKey?: string;
   apiUrl?: string;
   profile?: string;
@@ -40,9 +42,10 @@ interface ShareOptions {
 }
 
 export const shareCommand = new Command('share')
-  .description('Mint a public viewer token for an existing presentation')
+  .description('Mint a public viewer token (or an annotator link) for a presentation')
   .argument('<presentationId>', 'Presentation ID to share')
   .option('--name <name>', 'Human-readable label for the token (default: "default")')
+  .option('--annotator', 'Mint an annotator link: the holder can leave notes (requires --name)')
   .option('--to-version <n>', 'Pin the token to a specific version (default: follows latest)')
   .option('--api-key <key>', 'Override API key')
   .option('--api-url <url>', 'Override base URL')
@@ -71,6 +74,14 @@ export const shareCommand = new Command('share')
       versionMode = { type: 'pinned', version: v };
     }
 
+    // An annotator link must be named — the name becomes the note author.
+    if (options.annotator && !(options.name && options.name.trim())) {
+      const msg = '--annotator requires --name (the name is shown as the note author)';
+      if (jsonMode) emitJsonError({ code: 'invalid-argument', message: msg });
+      else exitWithError(msg, 1);
+      process.exit(1);
+    }
+
     const tokenName = (options.name ?? 'default').trim() || 'default';
 
     const result = await addPresentationToken({
@@ -80,6 +91,7 @@ export const shareCommand = new Command('share')
       presentationId: presentationId,
       tokenName,
       versionMode,
+      canAnnotate: options.annotator,
     });
 
     if (!result.success) {
@@ -106,12 +118,18 @@ export const shareCommand = new Command('share')
 
     const { tokenId, shareUrl } = result.data;
     console.log('');
-    console.log(`${CHECK} ${green('Viewer URL minted')}`);
+    console.log(`${CHECK} ${green(options.annotator ? 'Annotator link minted' : 'Viewer URL minted')}`);
     console.log('');
     console.log(`  Presentation:  ${presentationId}`);
     console.log(`  Token name:    ${tokenName}`);
     console.log(`  Token ID:      ${tokenId}`);
+    console.log(`  Type:          ${options.annotator ? 'annotator (can leave notes)' : 'viewer (read-only)'}`);
     if (versionMode?.type === 'pinned') console.log(`  Pinned to:     v${versionMode.version}`);
     console.log(`  Share URL:     ${cyan(shareUrl)}`);
+    if (options.annotator) {
+      console.log('');
+      console.log(`  Reviewers open this link and leave notes in the browser.`);
+      console.log(`  Pull them with: ${cyan('slideless pull-annotations ' + presentationId)}`);
+    }
     console.log('');
   });

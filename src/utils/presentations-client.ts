@@ -209,11 +209,17 @@ export async function deletePresentation(
 }
 
 export async function addPresentationToken(
-  opts: SharedClientOptions & { presentationId: string; tokenName: string; versionMode?: TokenVersionMode },
+  opts: SharedClientOptions & {
+    presentationId: string;
+    tokenName: string;
+    versionMode?: TokenVersionMode;
+    canAnnotate?: boolean;
+  },
 ): Promise<ApiResult<AddPresentationTokenOutput>> {
   const url = resolveEndpointUrl('addPresentationToken', opts.apiUrl, opts.profileName);
   const body: Record<string, unknown> = { presentationId: opts.presentationId, tokenName: opts.tokenName };
   if (opts.versionMode) body.versionMode = opts.versionMode;
+  if (opts.canAnnotate) body.canAnnotate = true;
   return apiCall<AddPresentationTokenOutput>({
     url,
     method: 'POST',
