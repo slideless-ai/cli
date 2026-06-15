@@ -18,7 +18,12 @@ import { randomUUID } from 'crypto';
 
 export const ANNOTATIONS_DIRNAME = '.slideless';
 export const ANNOTATIONS_FILENAME = 'annotations.json';
-export const ANNOTATIONS_FILE_VERSION = 1;
+// v2 added deckVersion/source/author. Reads still accept v1 files (missing
+// fields are backfilled with defaults on read); writes are always v2.
+export const ANNOTATIONS_FILE_VERSION = 2;
+
+/** Where an annotation came from: the local dev overlay, or pulled from hosted. */
+export type AnnotationSource = 'local' | 'hosted';
 
 /** Where the selection sat, recorded richly but used best-effort. */
 export interface AnnotationAnchor {
@@ -45,6 +50,12 @@ export interface Annotation {
   selectedText: string;
   context: { before: string; after: string };
   anchor: AnnotationAnchor;
+  /** Deck version this note was made against (null if the deck was never pushed). */
+  deckVersion: number | null;
+  /** Where the note originated. */
+  source: AnnotationSource;
+  /** Who made it: the API key name locally, the share token name when hosted. */
+  author: string | null;
 }
 
 export interface AnnotationsFile {
@@ -59,6 +70,12 @@ export interface AnnotationInput {
   selectedText: string;
   context?: { before?: string; after?: string };
   anchor?: Partial<AnnotationAnchor>;
+  /** Deck version stamp (resolved by the caller); defaults to null. */
+  deckVersion?: number | null;
+  /** Origin; defaults to 'local'. */
+  source?: AnnotationSource;
+  /** Author name; defaults to null. */
+  author?: string | null;
 }
 
 export function annotationsDir(deckRoot: string): string {
@@ -71,6 +88,16 @@ export function annotationsPath(deckRoot: string): string {
 
 function emptyFile(): AnnotationsFile {
   return { version: ANNOTATIONS_FILE_VERSION, annotations: [] };
+}
+
+/** Backfill v2 fields on annotations read from disk (v1 files lack them). */
+function normalizeReadAnnotation(a: Annotation): Annotation {
+  return {
+    ...a,
+    deckVersion: typeof a.deckVersion === 'number' ? a.deckVersion : null,
+    source: a.source === 'hosted' ? 'hosted' : 'local',
+    author: typeof a.author === 'string' ? a.author : null,
+  };
 }
 
 function normalizeAnchor(anchor?: Partial<AnnotationAnchor>): AnnotationAnchor {
@@ -102,13 +129,15 @@ export function readAnnotations(deckRoot: string): AnnotationsFile {
     const list = (parsed as { annotations?: unknown }).annotations;
     if (!Array.isArray(list)) return emptyFile();
     // Keep only entries that carry the bare minimum we need.
-    const annotations = list.filter(
-      (a): a is Annotation =>
-        !!a &&
-        typeof a === 'object' &&
-        typeof (a as Annotation).id === 'string' &&
-        typeof (a as Annotation).note === 'string',
-    );
+    const annotations = list
+      .filter(
+        (a): a is Annotation =>
+          !!a &&
+          typeof a === 'object' &&
+          typeof (a as Annotation).id === 'string' &&
+          typeof (a as Annotation).note === 'string',
+      )
+      .map(normalizeReadAnnotation);
     return { version: ANNOTATIONS_FILE_VERSION, annotations };
   } catch {
     return emptyFile();
@@ -145,6 +174,10 @@ export function addAnnotation(
         typeof input.context?.after === 'string' ? input.context.after : '',
     },
     anchor: normalizeAnchor(input.anchor),
+    deckVersion:
+      typeof input.deckVersion === 'number' ? input.deckVersion : null,
+    source: input.source === 'hosted' ? 'hosted' : 'local',
+    author: typeof input.author === 'string' ? input.author : null,
   };
   file.annotations.push(annotation);
   writeAnnotations(deckRoot, file);

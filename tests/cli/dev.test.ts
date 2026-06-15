@@ -405,3 +405,56 @@ describe('dev: annotation API disabled', () => {
     expect(post.status).toBe(405);
   });
 });
+
+describe('dev: annotation authorship + version', () => {
+  let root: string;
+  let server: Server;
+  let base: string;
+  const sseClients = new Set<ServerResponse>();
+
+  beforeEach(async () => {
+    root = mkdtempSync(join(tmpdir(), 'slideless-dev-'));
+    writeFileSync(join(root, 'index.html'), '<html><body>hi</body></html>');
+    // A pulled deck records its version in slideless.json → stamped on notes.
+    writeLocalManifest(root, {
+      presentationId: 'p1',
+      lastPulledVersion: 5,
+      lastPulledAt: '2026-06-15T00:00:00Z',
+      role: 'owner',
+    });
+    const served = buildServedMap(root);
+    server = createServer(
+      createRequestHandler({
+        deckRoot: root,
+        entry: 'index.html',
+        getServed: () => served,
+        reloadEnabled: true,
+        annotateEnabled: true,
+        author: 'Acme org key',
+        sseClients,
+      }),
+    );
+    await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+    const { port } = server.address() as AddressInfo;
+    base = `http://127.0.0.1:${port}`;
+  });
+  afterEach(async () => {
+    for (const c of sseClients) c.end();
+    sseClients.clear();
+    await new Promise<void>((r) => server.close(() => r()));
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it('stamps author, deckVersion (from slideless.json), and source=local', async () => {
+    const created = await (
+      await fetch(`${base}${ANNOTATIONS_API_PATH}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: 'fix this', path: '/', selectedText: 'hi' }),
+      })
+    ).json();
+    expect(created.author).toBe('Acme org key');
+    expect(created.deckVersion).toBe(5);
+    expect(created.source).toBe('local');
+  });
+});

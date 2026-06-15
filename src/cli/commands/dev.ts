@@ -48,6 +48,7 @@ import {
   updateAnnotation,
   removeAnnotation,
 } from '../../utils/annotations-store.js';
+import { getActiveProfile } from '../../utils/config.js';
 import { exitWithError, green, cyan, yellow, CHECK } from '../utils/output.js';
 
 interface DevOptions {
@@ -57,6 +58,7 @@ interface DevOptions {
   open?: boolean; // commander sets `open: false` for --no-open
   reload?: boolean; // commander sets `reload: false` for --no-reload
   annotate?: boolean; // commander sets `annotate: false` for --no-annotate
+  author?: string;
 }
 
 export const RELOAD_PATH = '/__slideless_reload';
@@ -174,6 +176,35 @@ export function pathToEntryFile(rawPath: string, entry: string): string {
   return p;
 }
 
+/** Deck version this annotation is made against: slideless.json's
+ * lastPulledVersion, or null when the deck was never pushed/pulled. */
+function resolveDeckVersion(deckRoot: string): number | null {
+  if (!hasLocalManifest(deckRoot)) return null;
+  try {
+    const v = readLocalManifest(deckRoot).lastPulledVersion;
+    return typeof v === 'number' ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Local annotation author = the active profile's API key name (the local analog
+ * of a hosted share token's name). Falls back to org name → profile name → null.
+ * Overridable via `--author` / `SLIDELESS_AUTHOR`.
+ */
+export function resolveAuthor(override?: string): string | null {
+  const forced = override ?? process.env.SLIDELESS_AUTHOR;
+  if (forced && forced.trim()) return forced.trim();
+  try {
+    const active = getActiveProfile();
+    if (!active) return null;
+    return active.profile.keyName || active.profile.organizationName || active.name || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Read a request body and parse it as JSON, tolerating empty/garbage. */
 function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resolvePromise) => {
@@ -206,6 +237,7 @@ async function handleAnnotationsApi(
   method: string,
   deckRoot: string,
   entry: string,
+  author: string | null,
 ): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://localhost');
   const id = url.searchParams.get('id') ?? '';
@@ -236,6 +268,9 @@ async function handleAnnotationsApi(
           typeof body.selectedText === 'string' ? body.selectedText : '',
         context: body.context as { before?: string; after?: string } | undefined,
         anchor: body.anchor as Record<string, unknown> | undefined,
+        deckVersion: resolveDeckVersion(deckRoot),
+        source: 'local',
+        author,
       });
       return json(201, created);
     }
@@ -268,6 +303,8 @@ interface HandlerDeps {
   reloadEnabled: boolean;
   /** When true, serve the overlay client + annotation API and inject the tag. */
   annotateEnabled: boolean;
+  /** Author stamped on locally-created annotations (API key name, or override). */
+  author?: string | null;
   sseClients: Set<ServerResponse>;
   /** Called when a browser opens/closes the live-reload channel. */
   onClientsChanged?: (count: number) => void;
@@ -277,6 +314,7 @@ interface HandlerDeps {
 export function createRequestHandler(deps: HandlerDeps) {
   const { deckRoot, entry, getServed, reloadEnabled, annotateEnabled, sseClients } =
     deps;
+  const author = deps.author ?? null;
   const notifyClients = () => deps.onClientsChanged?.(sseClients.size);
 
   return (req: IncomingMessage, res: ServerResponse): void => {
@@ -298,7 +336,7 @@ export function createRequestHandler(deps: HandlerDeps) {
       return;
     }
     if (annotateEnabled && rawPath === ANNOTATIONS_API_PATH) {
-      void handleAnnotationsApi(req, res, method, deckRoot, entry);
+      void handleAnnotationsApi(req, res, method, deckRoot, entry, author);
       return;
     }
 
@@ -432,6 +470,7 @@ export const devCommand = new Command('dev')
   .option('--no-open', "Don't open the browser on start")
   .option('--no-reload', 'Serve static files only (disable live-reload)')
   .option('--no-annotate', 'Disable the in-browser annotation overlay')
+  .option('--author <name>', 'Attribute local annotations to this name (default: your API key name)')
   .action((pathArg: string | undefined, options: DevOptions) => {
     const deckRoot = resolve(pathArg ?? '.');
     if (!existsSync(deckRoot) || !statSync(deckRoot).isDirectory()) {
@@ -445,6 +484,7 @@ export const devCommand = new Command('dev')
     }
     const reloadEnabled = options.reload !== false;
     const annotateEnabled = options.annotate !== false;
+    const author = resolveAuthor(options.author);
 
     let served = buildServedMap(deckRoot);
     let entry: string;
@@ -464,6 +504,7 @@ export const devCommand = new Command('dev')
         getServed: () => served,
         reloadEnabled,
         annotateEnabled,
+        author,
         sseClients,
         onClientsChanged: (count) => {
           if (count > lastClientCount) {
@@ -536,6 +577,11 @@ export const devCommand = new Command('dev')
         console.log(
           `  Annotate: ${annotateEnabled ? 'on (select text to leave a note)' : 'off'}`,
         );
+        if (annotateEnabled) {
+          console.log(
+            `  Author:  ${author ?? '(none — run slideless login, or pass --author)'}`,
+          );
+        }
         console.log('');
         console.log('  Press Ctrl+C to stop.');
         console.log('');

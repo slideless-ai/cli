@@ -358,6 +358,7 @@ export const ANNOTATION_CLIENT_JS = `(function () {
     '.__sl-item .__sl-quote{font-size:11.5px;color:var(--sl-muted);border-left:2px solid var(--sl-border2);',
     '  padding-left:8px;margin-bottom:8px;max-height:36px;overflow:hidden;font-style:italic;}',
     '.__sl-item .__sl-note{white-space:pre-wrap;word-break:break-word;font-size:13.5px;}',
+    '.__sl-item .__sl-meta{margin-top:7px;font-size:11px;color:var(--sl-muted);font-weight:500;}',
     // Enter (new note) / leave (removed or moved to other tab) animations.
     '@keyframes __sl-anno-in{from{opacity:0;transform:translateY(-7px) scale(.96);}to{opacity:1;transform:none;}}',
     '@keyframes __sl-anno-out{from{opacity:1;transform:none;max-height:340px;}',
@@ -587,6 +588,13 @@ export const ANNOTATION_CLIENT_JS = `(function () {
     if (a.selectedText) item.appendChild(el('div', '__sl-quote', '\\u201C' + a.selectedText.slice(0, 120) + '\\u201D'));
     var noteEl = el('div', '__sl-note', a.note);
     item.appendChild(noteEl);
+
+    // Footer: who left it, which version, and whether it came from the web.
+    var metaBits = [];
+    if (a.author) metaBits.push(a.author);
+    if (a.deckVersion !== null && a.deckVersion !== undefined) metaBits.push('v' + a.deckVersion);
+    if (a.source === 'hosted') metaBits.push('web');
+    if (metaBits.length) item.appendChild(el('div', '__sl-meta', metaBits.join(' \\u00B7 ')));
 
     var menu = el('div', '__sl-menu');
     var mJump = iconBtn('', 'jump', 'Jump to');

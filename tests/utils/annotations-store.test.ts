@@ -4,7 +4,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync } from 'fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -27,7 +27,7 @@ describe('annotations-store', () => {
   it('returns an empty shape when the file is absent', () => {
     const file = readAnnotations(root);
     expect(file.annotations).toEqual([]);
-    expect(file.version).toBe(1);
+    expect(file.version).toBe(2);
   });
 
   it('lazily creates .slideless/ on first save', () => {
@@ -119,5 +119,53 @@ describe('annotations-store', () => {
     const list = readAnnotations(root).annotations;
     expect(list).toHaveLength(1);
     expect(list[0].id).toBe('ok');
+  });
+
+  // ── v2: deckVersion / source / author ──────────────────────────────────
+
+  it('stores deckVersion/source/author when provided', () => {
+    const a = addAnnotation(root, {
+      note: 'n',
+      entryFile: 'index.html',
+      selectedText: 's',
+      deckVersion: 7,
+      source: 'hosted',
+      author: 'Acme key',
+    });
+    expect(a.deckVersion).toBe(7);
+    expect(a.source).toBe('hosted');
+    expect(a.author).toBe('Acme key');
+    const onDisk = readAnnotations(root).annotations[0];
+    expect(onDisk.deckVersion).toBe(7);
+    expect(onDisk.source).toBe('hosted');
+    expect(onDisk.author).toBe('Acme key');
+  });
+
+  it('defaults the v2 fields (null / local / null) when omitted', () => {
+    const a = addAnnotation(root, { note: 'n', entryFile: 'i.html', selectedText: 's' });
+    expect(a.deckVersion).toBeNull();
+    expect(a.source).toBe('local');
+    expect(a.author).toBeNull();
+  });
+
+  it('writes the file at schema version 2', () => {
+    addAnnotation(root, { note: 'n', entryFile: 'i.html', selectedText: 's' });
+    const raw = JSON.parse(readFileSync(annotationsPath(root), 'utf-8'));
+    expect(raw.version).toBe(2);
+  });
+
+  it('backfills v2 fields when reading a v1 file (no deckVersion/source/author)', () => {
+    mkdirSync(annotationsDir(root), { recursive: true });
+    writeFileSync(
+      annotationsPath(root),
+      JSON.stringify({
+        version: 1,
+        annotations: [{ id: 'old', note: 'legacy', entryFile: 'i.html', selectedText: 's' }],
+      }),
+    );
+    const a = readAnnotations(root).annotations[0];
+    expect(a.deckVersion).toBeNull();
+    expect(a.source).toBe('local');
+    expect(a.author).toBeNull();
   });
 });
