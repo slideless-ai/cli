@@ -100,7 +100,11 @@ export const pullAnnotationsCommand = new Command('pull-annotations')
       try {
         const manifest = readLocalManifest(deckRoot);
         if (!presentationId) presentationId = manifest.presentationId;
-        defaultVersion = manifest.lastPulledVersion;
+        // Only default the version filter to this deck's version when the
+        // presentationId ALSO came from this manifest. An explicit, possibly
+        // unrelated <presentationId> must NOT be silently filtered to the local
+        // deck's version (it would yield empty/wrong results).
+        if (!presentationIdArg) defaultVersion = manifest.lastPulledVersion;
       } catch {
         // No manifest — fine as long as a presentationId was passed explicitly.
       }
