@@ -169,18 +169,21 @@ git push origin main --follow-tags
 ### What each workflow does
 
 - **`.github/workflows/ci.yml`** — runs on every push to `main` and every PR. Installs deps, runs `npm test`, runs `npm run build`, executes the built CLI binary with `--help` as a smoke test. Matrix'd across Node 20 and 22.
-- **`.github/workflows/publish.yml`** — runs on tag pushes matching `v*.*.*`. Before publishing it (a) verifies the tag matches `package.json#version`, (b) re-runs tests, (c) re-runs the build, then publishes with `--access public --provenance` so the package carries a signed attestation from GitHub Actions.
+- **`.github/workflows/publish.yml`** — runs on tag pushes matching `v*.*.*`. Before publishing it (a) verifies the tag matches `package.json#version`, (b) re-runs tests, (c) re-runs the build, then publishes with `--access public`. Provenance is attached automatically under trusted publishing.
 
-### Prerequisites
+### Authentication: OIDC trusted publishing (no token)
 
-- `NPM_TOKEN` secret configured on `slideless-ai/cli` — must be an **automation token** (classic type), NOT a granular access token, so it bypasses npm's 2FA OTP prompt at publish time.
-- Regenerate it via https://www.npmjs.com/settings/~/tokens/new → "Classic Token" → "Automation".
+There is **no `NPM_TOKEN`**. Publishing authenticates via GitHub OIDC against the npm **trusted publisher** configured for the `slideless` package (provider GitHub Actions → repo `slideless-ai/cli` → workflow `publish.yml`). Nothing to rotate, nothing expires.
+
+Requirements baked into the workflow: the job has `permissions: id-token: write`, and a step upgrades npm to `latest` because OIDC trusted publishing needs **npm ≥ 11.5.1** (Node 20 ships npm 10.x).
+
+To manage the trusted publisher: npmjs.com (as `team@codika.io`, package admin) → `slideless` → Settings → Trusted Publisher.
 
 ### Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
-| `EOTP: This operation requires a one-time password` | `NPM_TOKEN` is a granular/publish token; replace with an automation token. |
+| `404 Not Found - PUT .../slideless` or "unable to authenticate" | Trusted publisher not configured / repo+workflow name mismatch, OR npm in CI is < 11.5.1 (check the upgrade step ran). |
 | `Tag vX.Y.Z does not match package.json version` | You tagged without running `npm version`. Delete the tag (`git tag -d vX.Y.Z && git push --delete origin vX.Y.Z`), run `npm version`, re-push. |
 | Publish succeeds but `npm view slideless version` is stale | CDN propagation; usually resolves in 30s. |
 
@@ -188,4 +191,4 @@ git push origin main --follow-tags
 
 - **Don't** bump the version by hand-editing `package.json` and then tagging — `npm version` does both atomically and protects against mismatch.
 - **Don't** push a tag that points at a commit that isn't on `main`. The workflow doesn't enforce this yet; if you do it accidentally, delete the tag before the workflow completes.
-- **Don't** run `npm publish` locally to "fix" a failed CI publish — fix the CI or rotate the token instead, so the npm registry's source of truth stays GitHub Actions.
+- **Don't** run `npm publish` locally to "fix" a failed CI publish — fix the workflow / trusted-publisher config instead, so the npm registry's source of truth stays GitHub Actions.
