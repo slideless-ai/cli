@@ -3,7 +3,7 @@
  * `.slideless/annotations.json` so the existing local apply flow consumes
  * local + hosted notes uniformly.
  *
- * Hosted annotations are owner-only and stored server-side (gathered by viewers
+ * Hosted annotations (owner or active dev collaborator) are stored server-side (gathered by viewers
  * through the hosted overlay). This command merges them into the same file
  * `slideless dev` writes to, deduping by the hosted annotation id so re-pulls
  * are idempotent and never clobber local notes.
@@ -67,7 +67,7 @@ function toLocal(a: PresentationAnnotationInfo): PreformedAnnotation {
 
 export const pullAnnotationsCommand = new Command('pull-annotations')
   .description(
-    'Pull hosted annotations into the local .slideless/annotations.json (owner-only)',
+    'Pull hosted annotations into the local .slideless/annotations.json (owner or dev collaborator)',
   )
   .argument(
     '[presentationId]',

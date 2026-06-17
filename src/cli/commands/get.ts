@@ -83,22 +83,23 @@ export const getCommand = new Command('get')
     if (p.lastViewedAt) console.log(`  Last viewed:      ${formatDate(p.lastViewedAt)}`);
     if (p.primaryShareUrl) console.log(`  Primary URL:      ${cyan(p.primaryShareUrl)}`);
 
-    if (p.role === 'owner') {
-      console.log('');
-      console.log(`  Tokens (${p.tokens.length}):`);
-      if (p.tokens.length === 0) {
-        console.log(`    (none — run \`slideless share ${p.id}\` to mint a viewer URL)`);
-      }
-      for (const t of p.tokens) {
-        const status = t.revoked ? yellow('[REVOKED]') : '';
-        console.log(`    • ${t.name} ${status}`.trimEnd());
-        console.log(`      ID:           ${t.tokenId}`);
-        console.log(`      Created:      ${formatDate(t.createdAt)}`);
-        console.log(`      Views:        ${t.accessCount}`);
-        if (t.lastAccessedAt) console.log(`      Last access:  ${formatDate(t.lastAccessedAt)}`);
-        if (!t.revoked) console.log(`      URL:          ${cyan(t.shareUrl)}`);
-      }
+    // Tokens — owners and active dev collaborators can both manage sharing.
+    console.log('');
+    console.log(`  Tokens (${p.tokens.length}):`);
+    if (p.tokens.length === 0) {
+      console.log(`    (none — run \`slideless share ${p.id}\` to mint a viewer URL)`);
+    }
+    for (const t of p.tokens) {
+      const status = t.revoked ? yellow('[REVOKED]') : '';
+      console.log(`    • ${t.name} ${status}`.trimEnd());
+      console.log(`      ID:           ${t.tokenId}`);
+      console.log(`      Created:      ${formatDate(t.createdAt)}`);
+      console.log(`      Views:        ${t.accessCount}`);
+      if (t.lastAccessedAt) console.log(`      Last access:  ${formatDate(t.lastAccessedAt)}`);
+      if (!t.revoked) console.log(`      URL:          ${cyan(t.shareUrl)}`);
+    }
 
+    if (p.role === 'owner') {
       console.log('');
       console.log(`  Collaborators (${p.collaborators.length}):`);
       if (p.collaborators.length === 0) {
@@ -115,8 +116,9 @@ export const getCommand = new Command('get')
       }
     } else {
       console.log('');
-      console.log(`  ${yellow('You have dev access via an active collaborator invite.')}`);
-      console.log(`  Run \`slideless pull ${p.id}\` to download the deck and edit it.`);
+      console.log(`  ${yellow('You have dev (collaborator) access.')}`);
+      console.log(`  You can edit (pull / push) and manage sharing. You can revoke only links you`);
+      console.log(`  created; only the owner can invite collaborators or delete the deck.`);
     }
     console.log('');
   });
