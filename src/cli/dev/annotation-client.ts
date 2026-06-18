@@ -81,7 +81,12 @@ export const ANNOTATION_CLIENT_JS = `(function () {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    }).then(function (r) { return r.json(); });
+    }).then(function (r) {
+      // Reject on failure so the Save handler's .catch fires instead of
+      // silently closing the popover as if the note was saved.
+      if (!r.ok) { throw new Error('HTTP ' + r.status); }
+      return r.json();
+    });
   }
   function apiUpdate(id, patch) {
     return fetch(API + '?id=' + encodeURIComponent(id), {
@@ -453,10 +458,20 @@ export const ANNOTATION_CLIENT_JS = `(function () {
   addBtn.addEventListener('mousedown', function (e) { e.preventDefault(); });
   addBtn.addEventListener('click', function () { openPopover(); });
   popCancel.addEventListener('click', function () { closePopover(); snapshot = null; });
+
+  // Guard against double-submit: ignore re-entrant clicks and disable the
+  // controls (with a "Saving…" state) until the request settles, so a slow
+  // save can't create duplicate notes. Re-enable on failure.
+  var isSaving = false;
   popSave.addEventListener('click', function () {
+    if (isSaving) return;
     if (!snapshot) return;
     var note = popText.value;
     if (!note || !note.trim()) { popText.focus(); return; }
+    isSaving = true;
+    popSave.disabled = true;
+    popCancel.disabled = true;
+    popSave.textContent = 'Saving…';
     apiCreate({
       note: note,
       path: snapshot.path,
@@ -468,6 +483,13 @@ export const ANNOTATION_CLIENT_JS = `(function () {
       snapshot = null;
       try { window.getSelection().removeAllRanges(); } catch (_) {}
       refresh();
+    }).catch(function () {
+      showToast('Could not save — please try again');
+    }).then(function () {
+      isSaving = false;
+      popSave.disabled = false;
+      popCancel.disabled = false;
+      popSave.textContent = 'Save';
     });
   });
 
